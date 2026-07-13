@@ -32,7 +32,7 @@ MBTI_TYPES = ["INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ", "ENFP",
 GENDER_KEYS = ["g_m", "g_f", "g_x"]
 GRADE_KEYS = ["grade_1", "grade_2", "grade_3"]
 MAJOR_KEYS = ["maj_ec", "maj_ej", "maj_ch", "maj_jp"]
-PORTRAIT_COUNT = 12
+PORTRAIT_COUNT = 16
 
 
 def node_to_list(node):

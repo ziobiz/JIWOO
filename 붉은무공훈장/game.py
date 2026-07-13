@@ -85,7 +85,7 @@ MBTI_TYPES = ["INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ", "ENFP",
 GENDER_KEYS = ["g_m", "g_f", "g_x"]
 GRADE_KEYS = ["grade_1", "grade_2", "grade_3"]     # 학년 (1·2·3학년)
 MAJOR_KEYS = ["maj_ec", "maj_ej", "maj_ch", "maj_jp"]
-PORTRAIT_COUNT = 12                                # 유화풍 초상 프리셋 개수
+PORTRAIT_COUNT = 16                                # 유화풍 초상 프리셋 개수
 # ── (구) 벡터 아바타 폴백용 상수 ──
 FACE_KEYS = ["round", "square"]
 HAIR_COUNT = 5
@@ -144,7 +144,7 @@ def resolve_speaker_portrait(speaker, text):
     return base
 for i in range(1, 17):
     IMG_BASE[f"bg{i}"] = f"bg({i})"
-for i in range(1, 13):
+for i in range(1, 17):
     IMG_BASE[f"portrait{i}"] = f"portrait{i}"
 
 FRAGMENT_ICON = {

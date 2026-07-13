@@ -74,6 +74,17 @@ export function PlayView({
     audio.setSfxVol(sfxVol);
     if (engine.currentBgm) audio.playBgm(engine.currentBgm);
     if (engine.currentAmb) audio.playAmb(engine.currentAmb);
+
+    // 자동재생 정책 대비: 첫 상호작용(클릭/키/터치)에서 반드시 오디오를 깨운다
+    const prime = () => primeAudio();
+    window.addEventListener("pointerdown", prime, { once: true });
+    window.addEventListener("keydown", prime, { once: true });
+    window.addEventListener("touchstart", prime, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", prime);
+      window.removeEventListener("keydown", prime);
+      window.removeEventListener("touchstart", prime);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -87,21 +98,29 @@ export function PlayView({
     force();
   }, [engine, audio, onEnd]);
 
-  const unlockAndAdvance = () => {
+  // 첫 사용자 상호작용 시 오디오 잠금 해제 + 현재 BGM/앰비언스 즉시 재생.
+  // (프롤로그 bgm 노드는 엔진 생성자에서 소비되므로 여기서 동기화해야 소리가 난다)
+  const primeAudio = useCallback(() => {
     audio.unlock();
+    if (engine.currentBgm) audio.playBgm(engine.currentBgm);
+    if (engine.currentAmb) audio.playAmb(engine.currentAmb);
+  }, [audio, engine]);
+
+  const unlockAndAdvance = () => {
+    primeAudio();
     engine.advance();
     tick();
   };
 
   const choose = (i: number) => {
-    audio.unlock();
+    primeAudio();
     audio.playSfx("click");
     engine.choose(i);
     tick();
   };
 
   const explore = (i: number) => {
-    audio.unlock();
+    primeAudio();
     audio.playSfx("click");
     engine.selectExplore(i);
     tick();
