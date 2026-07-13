@@ -8,7 +8,6 @@ import { defaultProfile, type Profile } from "./profile";
 import { LangSelector } from "./LangSelector";
 import { CreditsFooter } from "./CreditsFooter";
 import { getAudio } from "./audio";
-import { loadSettings } from "./save";
 
 const C = GAME.constants;
 
@@ -67,13 +66,6 @@ export function CharacterCreator({
     audio.unlock();
     audio.playSfx("click");
   };
-  // 프롤로그 BGM 시작 — 3번째 답변 시 음악이 흐르기 시작해 게임까지 이어짐
-  const startBgm = () => {
-    const s = loadSettings();
-    audio.setBgmVol(s.bgm);
-    audio.unlock();
-    audio.playBgm("prologue");
-  };
 
   function randomize() {
     click();
@@ -105,8 +97,6 @@ export function CharacterCreator({
     // 선택 즉시 색으로 반영. 자동 이동하지 않고 사용자가 '다음'으로 진행.
     click();
     upd({ survey: { ...profile.survey, [qk]: v } });
-    // 3번째(마지막) 질문에 답하면 프롤로그 BGM이 흐르기 시작
-    if (qk === "q3") startBgm();
   }
 
   function surveyNext() {
