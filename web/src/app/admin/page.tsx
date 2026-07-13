@@ -14,9 +14,27 @@ import {
   type GroupStat,
 } from "@/lib/breakdown";
 import { exportExcel, exportPptx, type AnalysisBundle } from "@/lib/exporters";
+import { ColumnChart, DonutChart, type Series, type Slice } from "./Charts";
 
 interface AdminReport extends AnalysisReport {
   rows?: PlayResult[];
+}
+
+type ViewMode = "both" | "chart" | "table";
+
+const CHART = {
+  baseline: "#94a3b8",
+  ours: "#0284c7",
+  good: "#059669",
+  principle: "#0284c7",
+  altruism: "#d97706",
+  self: "#f97316",
+};
+
+function endingColor(code: string): string {
+  if (["TRUE", "GOOD", "HIDDEN"].includes(code)) return "#059669";
+  if (code === "BAD") return "#e11d48";
+  return "#f59e0b";
 }
 
 /* ── 재사용 UI ─────────────────────────────────────────── */
@@ -122,56 +140,69 @@ function Verdict({
 
 /* ── 그룹별 교차분석 표 ─────────────────────────────────── */
 
-function GroupTable({ title, desc, stats }: { title: string; desc?: string; stats: GroupStat[] }) {
+function GroupTable({
+  title,
+  desc,
+  stats,
+  view,
+}: {
+  title: string;
+  desc?: string;
+  stats: GroupStat[];
+  view: ViewMode;
+}) {
   const maxN = Math.max(1, ...stats.map((s) => s.n));
+  const categories = stats.map((s) => s.label);
+  const series: Series[] = [
+    { name: "진엔딩%", color: CHART.good, values: stats.map((s) => s.goodEndingPct) },
+    { name: "원칙(Q1A)%", color: CHART.principle, values: stats.map((s) => s.principlePct) },
+    { name: "이타심(Q3B)%", color: CHART.altruism, values: stats.map((s) => s.altruismPct) },
+  ];
   return (
     <Card title={title} desc={desc}>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-              <th className="py-2 pr-3">구분</th>
-              <th className="py-2 pr-3">표본</th>
-              <th className="py-2 pr-3">진엔딩%</th>
-              <th className="py-2 pr-3">원칙(Q1A)%</th>
-              <th className="py-2 pr-3">이타심(Q3B)%</th>
-              <th className="py-2 pr-3">평균 용기</th>
-              <th className="py-2 pr-3">평균 공감</th>
-              <th className="py-2">평균 일치</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stats.map((s) => (
-              <tr key={s.key} className="border-b border-slate-100 text-slate-700">
-                <td className="py-2 pr-3 font-medium text-slate-900">{s.label}</td>
-                <td className="py-2 pr-3">
-                  <span className="inline-flex items-center gap-2">
-                    {s.n}
-                    <span className="hidden sm:inline-block h-1.5 w-16 rounded-full bg-slate-100">
-                      <span
-                        className="block h-1.5 rounded-full bg-sky-400"
-                        style={{ width: `${(s.n / maxN) * 100}%` }}
-                      />
-                    </span>
-                  </span>
-                </td>
-                <td className="py-2 pr-3">{s.goodEndingPct}</td>
-                <td className="py-2 pr-3">{s.principlePct}</td>
-                <td className="py-2 pr-3">{s.altruismPct}</td>
-                <td className="py-2 pr-3">{s.avgCourage}</td>
-                <td className="py-2 pr-3">{s.avgEmpathy}</td>
-                <td className="py-2">{s.avgMatches}/3</td>
+      {view !== "table" && <ColumnChart categories={categories} series={series} />}
+      {view !== "chart" && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
+                <th className="py-2 pr-3">구분</th>
+                <th className="py-2 pr-3">표본</th>
+                <th className="py-2 pr-3">진엔딩%</th>
+                <th className="py-2 pr-3">원칙(Q1A)%</th>
+                <th className="py-2 pr-3">이타심(Q3B)%</th>
+                <th className="py-2 pr-3">평균 용기</th>
+                <th className="py-2 pr-3">평균 공감</th>
+                <th className="py-2">평균 일치</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {/* 진엔딩 비율 막대 비교 */}
-      <div className="mt-4 space-y-2">
-        {stats.map((s) => (
-          <Bar key={s.key} label={`${s.label} · 진엔딩 (n=${s.n})`} value={s.goodEndingPct} />
-        ))}
-      </div>
+            </thead>
+            <tbody>
+              {stats.map((s) => (
+                <tr key={s.key} className="border-b border-slate-100 text-slate-700">
+                  <td className="py-2 pr-3 font-medium text-slate-900">{s.label}</td>
+                  <td className="py-2 pr-3">
+                    <span className="inline-flex items-center gap-2">
+                      {s.n}
+                      <span className="hidden sm:inline-block h-1.5 w-16 rounded-full bg-slate-100">
+                        <span
+                          className="block h-1.5 rounded-full bg-sky-400"
+                          style={{ width: `${(s.n / maxN) * 100}%` }}
+                        />
+                      </span>
+                    </span>
+                  </td>
+                  <td className="py-2 pr-3">{s.goodEndingPct}</td>
+                  <td className="py-2 pr-3">{s.principlePct}</td>
+                  <td className="py-2 pr-3">{s.altruismPct}</td>
+                  <td className="py-2 pr-3">{s.avgCourage}</td>
+                  <td className="py-2 pr-3">{s.avgEmpathy}</td>
+                  <td className="py-2">{s.avgMatches}/3</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </Card>
   );
 }
@@ -186,6 +217,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [view, setView] = useState<ViewMode>("both");
 
   const rows = useMemo(() => report?.rows ?? [], [report]);
   const grade = useMemo(() => byGrade(rows), [rows]);
@@ -340,6 +372,28 @@ export default function AdminDashboard() {
           <h1 className="text-lg font-semibold text-slate-900">학술 비교 분석 대시보드</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden mr-1">
+            {(
+              [
+                ["both", "표+그래프"],
+                ["chart", "그래프"],
+                ["table", "표"],
+              ] as [ViewMode, string][]
+            ).map(([v, lbl]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setView(v)}
+                className={`px-3 py-1.5 text-sm transition-colors ${
+                  view === v
+                    ? "bg-amber-600 text-white"
+                    : "bg-white text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {lbl}
+              </button>
+            ))}
+          </div>
           <ToolBtn onClick={() => window.print()}>PDF / 인쇄</ToolBtn>
           <ToolBtn onClick={doExcel} disabled={busy === "excel"}>
             {busy === "excel" ? "생성 중…" : "Excel 내보내기"}
@@ -401,20 +455,30 @@ export default function AdminDashboard() {
             {/* 엔딩 분포 */}
             {d.endingDistribution.length > 0 && (
               <Card title="엔딩 분포">
-                {d.endingDistribution.map((e) => (
-                  <Bar
-                    key={e.code}
-                    label={`${e.code} (${e.count}건)`}
-                    value={e.pct}
-                    color={
-                      ["TRUE", "GOOD", "HIDDEN"].includes(e.code)
-                        ? "bg-emerald-600"
-                        : e.code === "BAD"
-                          ? "bg-rose-500"
-                          : "bg-amber-500"
-                    }
+                {view !== "table" && (
+                  <DonutChart
+                    data={d.endingDistribution.map<Slice>((e) => ({
+                      label: e.code,
+                      value: e.count,
+                      color: endingColor(e.code),
+                    }))}
                   />
-                ))}
+                )}
+                {view !== "chart" &&
+                  d.endingDistribution.map((e) => (
+                    <Bar
+                      key={e.code}
+                      label={`${e.code} (${e.count}건)`}
+                      value={e.pct}
+                      color={
+                        ["TRUE", "GOOD", "HIDDEN"].includes(e.code)
+                          ? "bg-emerald-600"
+                          : e.code === "BAD"
+                            ? "bg-rose-500"
+                            : "bg-amber-500"
+                      }
+                    />
+                  ))}
               </Card>
             )}
 
@@ -429,18 +493,44 @@ export default function AdminDashboard() {
                 label="원칙(A) 비율"
                 higherIsBaseline
               />
-              <Bar label={`기존 통계 · 규칙 우선 ≈ ${BASELINE.model1Principle}%`} value={BASELINE.model1Principle} color="bg-slate-400" />
-              <Bar label={`우리 데이터 · 원칙(A) n=${d.model1.n}`} value={d.model1.principlePct} color="bg-sky-600" />
-              <Bar label="우리 데이터 · 공감(B)" value={d.model1.empathyPct} color="bg-emerald-600" />
+              {view !== "table" && (
+                <ColumnChart
+                  categories={["원칙(A)", "공감(B)"]}
+                  series={[
+                    { name: "기존 통계", color: CHART.baseline, values: [BASELINE.model1Principle, 100 - BASELINE.model1Principle] },
+                    { name: "우리 데이터", color: CHART.ours, values: [d.model1.principlePct, d.model1.empathyPct] },
+                  ]}
+                />
+              )}
+              {view !== "chart" && (
+                <>
+                  <Bar label={`기존 통계 · 규칙 우선 ≈ ${BASELINE.model1Principle}%`} value={BASELINE.model1Principle} color="bg-slate-400" />
+                  <Bar label={`우리 데이터 · 원칙(A) n=${d.model1.n}`} value={d.model1.principlePct} color="bg-sky-600" />
+                  <Bar label="우리 데이터 · 공감(B)" value={d.model1.empathyPct} color="bg-emerald-600" />
+                </>
+              )}
               <p className="text-xs text-slate-500">평균 저울 — 인간 {d.model1.avgHuman} · 군인 {d.model1.avgSoldier}</p>
               <Hypothesis text={REFERENCE.model1.hypothesis} />
               <Source>{REFERENCE.model1.baselines[0].source}</Source>
             </Card>
 
             <Card title="② MBTI 사고형(T) vs 감정형(F) — 엔딩 · 용기" desc="MBTI 3번째 지표(T/F) · 도달 엔딩 · 용기 스탯">
-              <Bar label={`기존 · 남성 T선호 ${BASELINE.model2MaleT}%`} value={BASELINE.model2MaleT} color="bg-slate-400" />
-              <Bar label={`우리 · T형 진엔딩 (n=${d.model2.tN})`} value={d.model2.tGoodEndingPct} color="bg-sky-600" />
-              <Bar label={`우리 · F형 진엔딩 (n=${d.model2.fN})`} value={d.model2.fGoodEndingPct} color="bg-emerald-600" />
+              {view !== "table" && (
+                <ColumnChart
+                  categories={["T형", "F형"]}
+                  series={[
+                    { name: "진엔딩%", color: CHART.good, values: [d.model2.tGoodEndingPct, d.model2.fGoodEndingPct] },
+                    { name: "평균 용기", color: CHART.ours, values: [d.model2.tAvgCourage, d.model2.fAvgCourage] },
+                  ]}
+                />
+              )}
+              {view !== "chart" && (
+                <>
+                  <Bar label={`기존 · 남성 T선호 ${BASELINE.model2MaleT}%`} value={BASELINE.model2MaleT} color="bg-slate-400" />
+                  <Bar label={`우리 · T형 진엔딩 (n=${d.model2.tN})`} value={d.model2.tGoodEndingPct} color="bg-sky-600" />
+                  <Bar label={`우리 · F형 진엔딩 (n=${d.model2.fN})`} value={d.model2.fGoodEndingPct} color="bg-emerald-600" />
+                </>
+              )}
               <p className="text-xs text-slate-500">T형 평균 용기 {d.model2.tAvgCourage} · F형 평균 용기 {d.model2.fAvgCourage}</p>
               <Hypothesis text={REFERENCE.model2.hypothesis} />
               <Source>{REFERENCE.model2.baselines[0].source}</Source>
@@ -453,9 +543,22 @@ export default function AdminDashboard() {
                 label="이타심(B) 비율"
                 higherIsBaseline={false}
               />
-              <Bar label={`기존 · 독재자 게임 양보 ${BASELINE.model3Dictator}%`} value={BASELINE.model3Dictator} color="bg-slate-400" />
-              <Bar label={`우리 · 이기심(A) n=${d.model3.n}`} value={d.model3.selfPct} color="bg-orange-500" />
-              <Bar label="우리 · 이타심(B)" value={d.model3.altruismPct} color="bg-emerald-600" />
+              {view !== "table" && (
+                <ColumnChart
+                  categories={["이기심(A)", "이타심(B)"]}
+                  series={[
+                    { name: "기존 통계", color: CHART.baseline, values: [100 - BASELINE.model3Dictator, BASELINE.model3Dictator] },
+                    { name: "우리 데이터", color: CHART.ours, values: [d.model3.selfPct, d.model3.altruismPct] },
+                  ]}
+                />
+              )}
+              {view !== "chart" && (
+                <>
+                  <Bar label={`기존 · 독재자 게임 양보 ${BASELINE.model3Dictator}%`} value={BASELINE.model3Dictator} color="bg-slate-400" />
+                  <Bar label={`우리 · 이기심(A) n=${d.model3.n}`} value={d.model3.selfPct} color="bg-orange-500" />
+                  <Bar label="우리 · 이타심(B)" value={d.model3.altruismPct} color="bg-emerald-600" />
+                </>
+              )}
               <p className="text-xs text-slate-500">평균 인간본능 {d.model3.avgInstinct} · 공감 {d.model3.avgEmpathy} · 기억조각 {d.model3.avgFragments}</p>
               <Hypothesis text={REFERENCE.model3.hypothesis} />
               <Source>{REFERENCE.model3.baselines[2].source}</Source>
@@ -463,12 +566,12 @@ export default function AdminDashboard() {
 
             {/* 그룹별 교차분석 */}
             <h2 className="pt-2 text-sm font-semibold tracking-widest text-slate-400">그룹별 교차분석</h2>
-            <GroupTable title="학년별" stats={grade} />
-            <GroupTable title="성별" stats={gender} />
-            <GroupTable title="전공별" stats={major} />
-            <GroupTable title="MBTI 사고형(T) vs 감정형(F)" stats={mbtiTF} />
+            <GroupTable title="학년별" stats={grade} view={view} />
+            <GroupTable title="성별" stats={gender} view={view} />
+            <GroupTable title="전공별" stats={major} view={view} />
+            <GroupTable title="MBTI 사고형(T) vs 감정형(F)" stats={mbtiTF} view={view} />
             {mbtiType.length > 0 && (
-              <GroupTable title="MBTI 유형별" desc="데이터가 있는 유형만 표본순으로 표시" stats={mbtiType} />
+              <GroupTable title="MBTI 유형별" desc="데이터가 있는 유형만 표본순으로 표시" stats={mbtiType} view={view} />
             )}
 
             {/* 원자료 + 삭제 */}

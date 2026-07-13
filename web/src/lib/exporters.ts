@@ -238,19 +238,34 @@ export async function exportPptx(b: AnalysisBundle) {
     [d.model3.altruismPct],
   );
 
-  // 6) 그룹별 교차분석 (표)
-  const tableSlide = (title: string, stats: GroupStat[]) => {
+  // 6) 그룹별 교차분석 (그래프 + 표)
+  const chartTableSlide = (title: string, stats: GroupStat[]) => {
     const s = pptx.addSlide({ masterName: "MAIN" });
     heading(s, title);
-    const head = ["구분", "n", "진엔딩%", "원칙%", "이타심%", "용기", "공감", "일치"];
-    const body = stats.map((g) => [
-      g.label, g.n, g.goodEndingPct, g.principlePct, g.altruismPct, g.avgCourage, g.avgEmpathy, g.avgMatches,
-    ]);
+    const labels = stats.map((g) => g.label);
+    // 왼쪽: 막대 그래프(진엔딩%/원칙%/이타심%)
+    s.addChart(
+      pptx.ChartType.bar,
+      [
+        { name: "진엔딩%", labels, values: stats.map((g) => g.goodEndingPct) },
+        { name: "원칙(Q1A)%", labels, values: stats.map((g) => g.principlePct) },
+        { name: "이타심(Q3B)%", labels, values: stats.map((g) => g.altruismPct) },
+      ],
+      {
+        x: 0.55, y: 1.35, w: 7.6, h: 5,
+        barDir: "col", showValue: true, showLegend: true, legendPos: "b",
+        chartColors: [GREEN, "0284C7", AMBER],
+        valAxisMaxVal: 100, valAxisMinVal: 0,
+      },
+    );
+    // 오른쪽: 요약 표
+    const head = ["구분", "n", "진엔딩%", "용기", "일치"];
+    const body = stats.map((g) => [g.label, g.n, g.goodEndingPct, g.avgCourage, g.avgMatches]);
     const rows = [head, ...body].map((r, ri) =>
       r.map((c) => ({
         text: String(c),
         options: {
-          fontSize: 12,
+          fontSize: 11,
           bold: ri === 0,
           color: ri === 0 ? "FFFFFF" : NAVY,
           fill: ri === 0 ? { color: NAVY } : { color: ri % 2 ? "F1F5F9" : "FFFFFF" },
@@ -258,14 +273,14 @@ export async function exportPptx(b: AnalysisBundle) {
         },
       })),
     );
-    s.addTable(rows, { x: 0.6, y: 1.4, w: 12.1, border: { type: "solid", color: "E2E8F0", pt: 1 } });
+    s.addTable(rows, { x: 8.4, y: 1.5, w: 4.3, border: { type: "solid", color: "E2E8F0", pt: 1 } });
     foot(s);
   };
-  tableSlide("학년별 교차분석", b.grade);
-  tableSlide("성별 교차분석", b.gender);
-  tableSlide("전공별 교차분석", b.major);
-  tableSlide("MBTI(T·F) 교차분석", b.mbtiTF);
-  if (b.mbtiType.length) tableSlide("MBTI 유형별 교차분석", b.mbtiType);
+  chartTableSlide("학년별 교차분석", b.grade);
+  chartTableSlide("성별 교차분석", b.gender);
+  chartTableSlide("전공별 교차분석", b.major);
+  chartTableSlide("MBTI(T·F) 교차분석", b.mbtiTF);
+  if (b.mbtiType.length) chartTableSlide("MBTI 유형별 교차분석", b.mbtiType);
 
   // 7) 참고문헌
   {
