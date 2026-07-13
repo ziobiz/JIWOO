@@ -83,13 +83,19 @@ export function CharacterCreator({
   const answer = profile.survey[qk];
 
   function pickAnswer(v: "A" | "B") {
-    const next = { ...profile.survey, [qk]: v };
-    upd({ survey: next });
-    if (surveyIdx < 2) {
-      setSurveyIdx((i) => i + 1);
-    } else {
-      onDone({ ...profile, survey: next });
-    }
+    // 선택 즉시 색으로 반영. 자동 이동하지 않고 사용자가 '다음'으로 진행.
+    upd({ survey: { ...profile.survey, [qk]: v } });
+  }
+
+  function surveyNext() {
+    if (!answer) return;
+    if (surveyIdx < 2) setSurveyIdx((i) => i + 1);
+    else onDone(profile);
+  }
+
+  function surveyPrev() {
+    if (surveyIdx > 0) setSurveyIdx((i) => i - 1);
+    else setPhase("info");
   }
 
   return (
@@ -200,13 +206,9 @@ export function CharacterCreator({
             >
               {ui("cc_random", lang)}
             </button>
-            <button
-              type="button"
-              onClick={toSurvey}
-              className="rounded-lg bg-amber-700 px-8 py-2.5 text-sm font-medium hover:bg-amber-600"
-            >
+            <NavButton dir="next" onClick={toSurvey} primary>
               {ui("cc_next", lang)}
-            </button>
+            </NavButton>
           </div>
         </div>
       )}
@@ -227,35 +229,95 @@ export function CharacterCreator({
               {ui(`${qk}_t`, lang)}
             </p>
             <div className="space-y-3">
-              {(["A", "B"] as const).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => pickAnswer(v)}
-                  className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition-colors ${
-                    answer === v
-                      ? "border-amber-600 bg-amber-700/30"
-                      : "border-stone-700 bg-stone-950 hover:border-stone-500"
-                  }`}
-                >
-                  <span className="text-amber-400 font-medium mr-2">{v}.</span>
-                  {ui(`${qk}_${v.toLowerCase()}`, lang)}
-                </button>
-              ))}
+              {(["A", "B"] as const).map((v) => {
+                const selected = answer === v;
+                return (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => pickAnswer(v)}
+                    aria-pressed={selected}
+                    className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition-all ${
+                      selected
+                        ? "border-amber-500 bg-amber-600/25 text-amber-50 ring-1 ring-amber-500/60 shadow-md shadow-amber-900/20"
+                        : "border-stone-700 bg-stone-950 text-stone-300 hover:border-stone-500"
+                    }`}
+                  >
+                    <span
+                      className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold mr-2 align-middle ${
+                        selected
+                          ? "bg-amber-500 text-stone-950"
+                          : "bg-stone-800 text-amber-400"
+                      }`}
+                    >
+                      {v}
+                    </span>
+                    {ui(`${qk}_${v.toLowerCase()}`, lang)}
+                    {selected && <span className="ml-2 text-amber-400">✓</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="flex justify-between mt-6">
-            <button
-              type="button"
-              onClick={() => (surveyIdx > 0 ? setSurveyIdx((i) => i - 1) : setPhase("info"))}
-              className="text-sm text-stone-500 hover:text-stone-300"
+          <div className="flex items-center justify-between mt-6">
+            <NavButton dir="prev" onClick={surveyPrev}>
+              {ui("cc_prev", lang)}
+            </NavButton>
+            <p className="text-xs text-stone-600">
+              {answer ? "" : "선택해 주세요"}
+            </p>
+            <NavButton
+              dir="next"
+              onClick={surveyNext}
+              disabled={!answer}
+              primary
             >
-              ← {ui("cc_prev", lang)}
-            </button>
+              {surveyIdx < 2 ? ui("cc_next", lang) : ui("cc_start", lang)}
+            </NavButton>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+/** 삼각형(chevron) 이전/다음 네비게이션 버튼 */
+function NavButton({
+  dir,
+  onClick,
+  disabled,
+  primary,
+  children,
+}: {
+  dir: "prev" | "next";
+  onClick: () => void;
+  disabled?: boolean;
+  primary?: boolean;
+  children: React.ReactNode;
+}) {
+  const chevrons = dir === "next" ? "▶▶" : "◀◀";
+  const base =
+    "inline-flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-medium transition-all";
+  const style = disabled
+    ? "opacity-40 cursor-not-allowed border border-stone-700 text-stone-500"
+    : primary
+      ? "bg-amber-700 text-amber-50 hover:bg-amber-600 shadow-md shadow-amber-900/20"
+      : "border border-stone-700 text-stone-300 hover:border-amber-700 hover:text-amber-200";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`${base} ${style}`}
+    >
+      {dir === "prev" && (
+        <span className="text-xs tracking-tight opacity-80">{chevrons}</span>
+      )}
+      {children}
+      {dir === "next" && (
+        <span className="text-xs tracking-tight opacity-80">{chevrons}</span>
+      )}
+    </button>
   );
 }
