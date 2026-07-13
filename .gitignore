@@ -5,9 +5,22 @@ __pycache__/
 .venv/
 venv/
 
-# 런타임 상태 (사용자별 저장/설정 파일)
+# Python 런타임 (데스크톱)
 savegame.json
 settings.json
+profile.json
+results.csv
+analysis_report.json
+
+# Web
+web/node_modules/
+web/.next/
+web/.env.local
+web/.vercel/
+web/public/assets/
+# 임시 검증 스크립트/스크린샷
+_*.py
+_*.png
 
 # OS
 Thumbs.db

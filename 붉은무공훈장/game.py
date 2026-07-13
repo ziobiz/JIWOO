@@ -15,6 +15,7 @@ pygame 비주얼 노벨 엔진 (UI/UX 리디자인 v3)
 import io
 import os
 import sys
+import csv
 import math
 import json
 import time
@@ -78,15 +79,73 @@ HUD_GROUPS = [
 ]
 ALL_FRAGMENTS = ["군복", "짐의 군번줄", "붉은 손수건", "탄피", "마지막 깃발"]
 
+# ── 캐릭터 생성 옵션 (i18n 키) ─────────────────────────
+MBTI_TYPES = ["INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ", "ENFP",
+              "ISTJ", "ISFJ", "ESTJ", "ESFJ", "ISTP", "ISFP", "ESTP", "ESFP"]
+GENDER_KEYS = ["g_m", "g_f", "g_x"]
+GRADE_KEYS = ["grade_1", "grade_2", "grade_3"]     # 학년 (1·2·3학년)
+MAJOR_KEYS = ["maj_ec", "maj_ej", "maj_ch", "maj_jp"]
+PORTRAIT_COUNT = 12                                # 유화풍 초상 프리셋 개수
+# ── (구) 벡터 아바타 폴백용 상수 ──
+FACE_KEYS = ["round", "square"]
+HAIR_COUNT = 5
+HAIR_COLORS = [(38, 30, 26), (96, 62, 40), (170, 132, 74),
+               (78, 80, 88), (150, 96, 128)]
+SKIN = (238, 205, 176)
+NAME_MAX = {"KR": 5, "JP": 5, "CH": 5, "EN": 10}   # 언어별 이름 글자수 제한
+
 IMG_BASE = {
     "henry": "henry", "jim": "jim", "wilson": "wilson",
+    "henry_afraid": "henry_afraid", "henry_brave": "henry_brave",
+    "henry_guilt": "henry_guilt", "henry_grief": "henry_grief",
+    "henry_hope": "henry_hope", "henry_warm": "henry_warm", "henry_hurt": "henry_hurt",
+    "commander": "commander", "soldier": "soldier", "daniel": "daniel",
+    "mark": "mark", "veteran": "veteran", "wounded": "wounded", "medic": "medic",
     "player1": "player(1)", "player2": "player(2)",
     "talk": "talk",
     "clothes": "clothes", "ballchain": "ballchain", "scarf": "scarf",
     "empshell": "empshell", "flag": "flag",
 }
+
+# 화자(원문 이름) → 좌측 유화풍 초상 키. 헨리는 대사 감정으로 변형 선택.
+SPEAKER_PORTRAIT = {
+    "헨리": "henry", "윌슨": "wilson", "짐": "jim",
+    "지휘관": "commander", "병사": "soldier", "병사A": "soldier", "병사B": "soldier",
+    "대니얼": "daniel", "마크": "mark", "노병": "veteran",
+    "부상병": "wounded", "의무병": "medic",
+}
+# 헨리 감정 분류: 위에서부터 우선순위대로 검사 (구체적 상태 우선).
+#   hurt(배드엔딩 상처) → warm(감사·치유) → grief(짐의 죽음/비탄)
+#   → guilt(도망·겁쟁이·죄책감) → brave(결의) → afraid(공포) → hope(희망) → neutral
+_HENRY_EMOTION = [
+    ("henry_hurt",   ("겁쟁이로만", "다른 사람들처럼", "날 겁쟁이로")),
+    ("henry_warm",   ("미워하지 않아", "용서", "들려주고 싶", "듣고 싶었", "고마워",
+                      "네가 있어서", "이제 나는")),
+    ("henry_grief",  ("짐이", "돌아오지 못한", "죽었잖아", "끝까지 싸우다", "먼저 떠올")),
+    ("henry_guilt",  ("겁쟁이", "비겁", "죄인", "도망쳤", "비웃", "도망친")),
+    ("henry_brave",  ("버텨", "앞으로", "이번엔", "이번에", "내가 가", "구하자",
+                      "같이 들자", "지킬", "해낼", "가자", "알겠어")),
+    ("henry_afraid", ("무섭", "무서", "두려", "겁나", "도망가고 싶", "도망칠까", "떨려")),
+    ("henry_hope",   ("믿어 볼게", "버틸 수 있", "그러길 바라", "다행", "정말?", "바랄게")),
+]
+
+
+def resolve_speaker_portrait(speaker, text):
+    """화자와 대사 내용을 분석해 좌측에 세울 초상 키를 결정."""
+    if not speaker or speaker == "나":
+        return None
+    base = SPEAKER_PORTRAIT.get(speaker)
+    if base == "henry":
+        t = text or ""
+        for key, kws in _HENRY_EMOTION:
+            if any(k in t for k in kws):
+                return key
+        return "henry"
+    return base
 for i in range(1, 17):
     IMG_BASE[f"bg{i}"] = f"bg({i})"
+for i in range(1, 13):
+    IMG_BASE[f"portrait{i}"] = f"portrait{i}"
 
 FRAGMENT_ICON = {
     "군복": "clothes", "짐의 군번줄": "ballchain", "붉은 손수건": "scarf",
@@ -137,8 +196,21 @@ def _font_path(serif, bold, lang):
 _FONT_CACHE = {}
 
 
-def get_font(size, bold=False, serif=False):
-    lang = i18n.current
+def _script_lang(s):
+    """문자열의 문자로부터 알맞은 글꼴 언어를 추정 (이름 등 고유명사용)."""
+    for ch in s or "":
+        o = ord(ch)
+        if 0x3040 <= o <= 0x30FF:            # 가나 → 일본어 글꼴
+            return "JP"
+        if 0xAC00 <= o <= 0xD7A3:            # 한글
+            return "KR"
+        if 0x4E00 <= o <= 0x9FFF:            # 한자
+            return "CH"
+    return "EN"
+
+
+def get_font(size, bold=False, serif=False, lang=None):
+    lang = lang or i18n.current
     key = (size, bold, serif, lang)
     if key in _FONT_CACHE:
         return _FONT_CACHE[key]
@@ -154,15 +226,20 @@ def get_font(size, bold=False, serif=False):
     return f
 
 
-def fit_font(text, base_size, max_w, bold=False, serif=False, min_size=18):
+def fit_font(text, base_size, max_w, bold=False, serif=False, min_size=18, lang=None):
     """text 가 max_w 를 넘지 않도록 폰트 크기를 줄여서 반환."""
     size = base_size
     while size > min_size:
-        f = get_font(size, bold=bold, serif=serif)
+        f = get_font(size, bold=bold, serif=serif, lang=lang)
         if f.size(text)[0] <= max_w:
             return f
         size -= 2
-    return get_font(min_size, bold=bold, serif=serif)
+    return get_font(min_size, bold=bold, serif=serif, lang=lang)
+
+
+def name_font(name, size, bold=False, serif=True):
+    """플레이어 이름 등 고유명사를 그 문자에 맞는 글꼴로 렌더."""
+    return get_font(size, bold=bold, serif=serif, lang=_script_lang(name))
 
 
 # ── 이미지 로드 ──────────────────────────────────────
@@ -555,8 +632,53 @@ stats = {}
 conflict = {"인간": 0, "군인": 0}
 items = []
 toasts = []
+
+PROFILE_PATH = os.path.join(HERE, "profile.json")
+RESULT_PATH = os.path.join(HERE, "results.csv")
+
+
+def default_profile():
+    return {
+        "name": "", "gender": "g_x", "grade": "grade_1", "major": "maj_ec", "mbti": "INTJ",
+        "portrait": 0,
+        "survey": {"q1": None, "q2": None, "q3": None},
+    }
+
+
+profile = default_profile()
+
+
+def apply_profile_name():
+    i18n.set_player_name(profile.get("name", ""))
+
+
+def save_profile():
+    try:
+        with open(PROFILE_PATH, "w", encoding="utf-8") as f:
+            json.dump(profile, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[경고] 프로필 저장 실패: {e}")
+
+
+def load_profile():
+    if not os.path.exists(PROFILE_PATH):
+        return False
+    try:
+        with open(PROFILE_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        base = default_profile()
+        base.update({k: data.get(k, base[k]) for k in base})
+        base["survey"] = {**base["survey"], **(data.get("survey") or {})}
+        profile.clear(); profile.update(base)
+        apply_profile_name()
+        return True
+    except Exception as e:
+        print(f"[경고] 프로필 불러오기 실패: {e}")
+        return False
 hud_visible = True
 letterbox = 0.0          # 0~1 시네마 레터박스 양
+_player_turn = False     # 현재 대사 화자가 '나'(플레이어)인지 — 좌측 아바타 표시용
+_speaker_portrait = None  # 현재 대사 화자(NPC)의 좌측 초상 키
 
 dialog_log = []          # 대사 백로그 [(name, text, color), ...]
 progress = {"index": 0}  # STORY 최상위 노드 진행 인덱스(세이브 지점)
@@ -636,17 +758,259 @@ def _text_shadow(font, text, color, ox, oy, shadow=(0, 0, 0), sa=150):
 
 
 # ── 장면 그리기 ──────────────────────────────────────
+# ── 플레이어 아바타 (절차적 벡터 초상) ─────────────────
+_avatar_cache = {}
+
+
+def _dark(c, f=0.62):
+    return tuple(max(0, int(x * f)) for x in c)
+
+
+def _lite(c, f=1.22):
+    return tuple(min(255, int(x * f)) for x in c)
+
+
+def render_avatar(size, look, gender="g_x"):
+    """머리 스타일·색, 안경, 헤어밴드, 얼굴형, 성별에 따라 초상(버스트)을 그린다."""
+    style = look.get("hair", 0) % HAIR_COUNT
+    face = look.get("face", "round")
+    key = (size, style, look.get("haircol", 0), bool(look.get("glasses")),
+           bool(look.get("band")), face, gender)
+    if key in _avatar_cache:
+        return _avatar_cache[key]
+
+    S = size
+    surf = pygame.Surface((S, S), pygame.SRCALPHA)
+    cx = S // 2
+    hair = HAIR_COLORS[look.get("haircol", 0) % len(HAIR_COLORS)]
+    cloth = {"g_m": (72, 84, 116), "g_f": (156, 92, 112)}.get(gender, (96, 92, 112))
+
+    hy = int(S * 0.44); hw = int(S * 0.235); hh = int(S * 0.285)
+    top = hy - hh
+
+    # 어깨/상의 (버스트)
+    pygame.draw.ellipse(surf, cloth, (cx - int(S * 0.40), int(S * 0.82), int(S * 0.80), int(S * 0.46)))
+    pygame.draw.ellipse(surf, _lite(cloth, 1.12), (cx - int(S * 0.40), int(S * 0.82), int(S * 0.80), int(S * 0.16)))
+    # 목
+    pygame.draw.rect(surf, _dark(SKIN, 0.9), (cx - int(S * 0.058), hy + hh - int(S * 0.05), int(S * 0.116), int(S * 0.15)))
+
+    # 뒷머리 (긴 스타일은 어깨까지)
+    if style in (2, 3):
+        bh = int(S * 0.58) if style == 2 else int(S * 0.42)
+        pygame.draw.ellipse(surf, _dark(hair, 0.82),
+                            (cx - hw - int(S * 0.04), top + int(S * 0.02), 2 * hw + int(S * 0.08), bh + hh))
+
+    # 머리 윗부분(캡)
+    bang = {0: 0.30, 1: 0.24, 2: 0.34, 3: 0.32, 4: 0.10}[style]
+    cap = pygame.Rect(cx - hw - int(S * 0.012), top - int(S * 0.02),
+                      2 * hw + int(S * 0.024), int(hh * 1.35))
+    if style == 4:                                   # 아주 짧은 머리
+        pygame.draw.ellipse(surf, hair, (cx - hw, top, 2 * hw, int(hh * 0.9)))
+    elif face == "square":
+        pygame.draw.rect(surf, hair, cap, border_radius=int(S * 0.10))
+    else:
+        pygame.draw.ellipse(surf, hair, cap)
+
+    # 얼굴 (뱅 아래로 내려 이마를 머리로 덮음)
+    foff = int(hh * bang)
+    fw = int(hw * (0.94 if style == 4 else 0.86))
+    frect = (cx - fw, top + foff, 2 * fw, 2 * hh - foff)
+    if face == "square":
+        pygame.draw.rect(surf, SKIN, frect, border_radius=int(S * 0.085))
+    else:
+        pygame.draw.ellipse(surf, SKIN, frect)
+
+    # 귀
+    er = int(S * 0.032)
+    pygame.draw.circle(surf, _dark(SKIN, 0.95), (cx - fw, hy + int(S * 0.02)), er)
+    pygame.draw.circle(surf, _dark(SKIN, 0.95), (cx + fw, hy + int(S * 0.02)), er)
+
+    # 보브: 볼 옆 머리
+    if style == 3:
+        for sx in (cx - hw, cx + hw - int(hw * 0.42)):
+            pygame.draw.rect(surf, hair, (sx, top + int(hh * 0.5), int(hw * 0.42), int(hh * 1.3)),
+                             border_radius=int(S * 0.05))
+
+    # 눈
+    ey = hy + int(hh * 0.16); ex = int(fw * 0.5); ew = int(S * 0.05); eh = int(S * 0.06)
+    for sx in (cx - ex, cx + ex):
+        pygame.draw.ellipse(surf, (250, 250, 250), (sx - ew, ey - eh // 2, 2 * ew, eh))
+        pygame.draw.circle(surf, (46, 36, 32), (sx, ey), int(ew * 0.8))
+        pygame.draw.circle(surf, (250, 250, 250), (sx + 2, ey - 2), max(1, int(ew * 0.28)))
+        # 눈썹
+        pygame.draw.line(surf, _dark(hair, 0.7), (sx - ew, ey - eh), (sx + ew, ey - eh - 2), 3)
+
+    # 코 · 입
+    pygame.draw.line(surf, _dark(SKIN, 0.8), (cx, hy + int(hh * 0.30)), (cx + int(S * 0.012), hy + int(hh * 0.42)), 2)
+    mouth = (188, 96, 96) if gender == "g_f" else (170, 110, 96)
+    pygame.draw.arc(surf, mouth, (cx - int(S * 0.05), hy + int(hh * 0.42), int(S * 0.10), int(S * 0.09)),
+                    math.pi + 0.4, 2 * math.pi - 0.4, 3)
+    if gender == "g_f":                              # 볼터치
+        for sx in (cx - int(fw * 0.7), cx + int(fw * 0.7)):
+            bl = pygame.Surface((int(S * 0.09), int(S * 0.05)), pygame.SRCALPHA)
+            pygame.draw.ellipse(bl, (230, 150, 150, 90), bl.get_rect())
+            surf.blit(bl, (sx - int(S * 0.045), hy + int(hh * 0.30)))
+
+    # 안경
+    if look.get("glasses"):
+        gr = int(S * 0.072)
+        col = (54, 48, 44)
+        for sx in (cx - ex, cx + ex):
+            pygame.draw.rect(surf, col, (sx - gr, ey - gr + 4, 2 * gr, 2 * gr - 6), 3, border_radius=int(S * 0.03))
+        pygame.draw.line(surf, col, (cx - ex + gr, ey), (cx + ex - gr, ey), 3)
+        pygame.draw.line(surf, col, (cx - ex - gr, ey - 2), (cx - fw, ey - 4), 3)
+        pygame.draw.line(surf, col, (cx + ex + gr, ey - 2), (cx + fw, ey - 4), 3)
+
+    # 헤어밴드
+    if look.get("band"):
+        band_col = (196, 74, 68) if gender != "g_m" else (70, 120, 150)
+        br = pygame.Rect(cx - hw - int(S * 0.014), top + int(hh * 0.30),
+                         2 * hw + int(S * 0.028), int(hh * 0.22))
+        pygame.draw.rect(surf, band_col, br, border_radius=int(S * 0.03))
+        pygame.draw.rect(surf, _lite(band_col), (br.x, br.y, br.w, max(2, br.h // 3)), border_radius=int(S * 0.03))
+
+    _avatar_cache[key] = surf
+    return surf
+
+
+def _portrait_raw(index):
+    key = f"portrait{int(index) + 1}"
+    path = _find_asset(key)
+    if not path:
+        return None
+    try:
+        return _safe_load(path).convert_alpha()
+    except Exception:
+        return None
+
+
+def _fit_cover(raw, w, h, top_bias=0.12):
+    """raw 이미지를 w×h 를 채우도록 확대 후 중앙(상단 편향) 크롭."""
+    rw, rh = raw.get_size()
+    scale = max(w / rw, h / rh)
+    sw, sh = max(1, int(rw * scale)), max(1, int(rh * scale))
+    scaled = pygame.transform.smoothscale(raw, (sw, sh))
+    out = pygame.Surface((w, h), pygame.SRCALPHA)
+    ox = (sw - w) // 2
+    oy = int((sh - h) * top_bias)                 # 얼굴이 상단에 오도록 위쪽을 남긴다
+    out.blit(scaled, (-ox, -oy))
+    return out
+
+
+def portrait_cameo(index, w, h, radius=16):
+    """액자형 초상 (둥근 모서리 + 금색 테두리) — 생성 화면 미리보기/썸네일용."""
+    ck = ("cameo", int(index), w, h, radius)
+    if ck in _IMG_CACHE:
+        return _IMG_CACHE[ck]
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+    raw = _portrait_raw(index)
+    if raw is None:
+        surf.fill((30, 28, 26, 255))
+        av = render_avatar(min(w, h), {}, profile.get("gender", "g_x"))
+        surf.blit(av, av.get_rect(center=(w // 2, h // 2)))
+    else:
+        img = _fit_cover(raw, w, h)
+        mask = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.rect(mask, (255, 255, 255, 255), (0, 0, w, h), border_radius=radius)
+        img.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        surf.blit(img, (0, 0))
+    pygame.draw.rect(surf, (*GOLD_SOFT, 220), (0, 0, w, h), 2, border_radius=radius)
+    _IMG_CACHE[ck] = surf
+    return surf
+
+
+def load_player_portrait(index):
+    """플레이어 대사용 버스트 : 초상을 세로로 세우고 가장자리를 페더링해 장면에 녹인다."""
+    ck = ("pbust", int(index))
+    if ck in _IMG_CACHE:
+        return _IMG_CACHE[ck]
+    raw = _portrait_raw(index)
+    if raw is None:
+        img = render_avatar(360, {}, profile.get("gender", "g_x"))
+        _IMG_CACHE[ck] = img
+        return img
+    img = _feather_bust(raw)
+    _IMG_CACHE[ck] = img
+    return img
+
+
+def _feather_bust(raw):
+    """초상 원본을 세로 버스트로 스케일하고 사방을 페더링해 장면에 녹인다."""
+    h = int(HEIGHT * 0.66)
+    w = int(h * raw.get_width() / raw.get_height())
+    img = pygame.transform.smoothscale(raw, (w, h)).convert_alpha()
+    mask = pygame.Surface((w, h), pygame.SRCALPHA)
+    mask.fill((255, 255, 255, 255))
+    for i in range(max(1, int(h * 0.22))):        # 상단
+        a = int(255 * i / int(h * 0.22))
+        pygame.draw.line(mask, (255, 255, 255, a), (0, i), (w, i))
+    for i in range(max(1, int(h * 0.26))):        # 하단
+        a = int(255 * i / int(h * 0.26))
+        pygame.draw.line(mask, (255, 255, 255, a), (0, h - 1 - i), (w, h - 1 - i))
+    fs = max(1, int(w * 0.16))
+    side = pygame.Surface((w, h), pygame.SRCALPHA); side.fill((255, 255, 255, 255))
+    for i in range(fs):                            # 좌우
+        a = int(255 * i / fs)
+        pygame.draw.line(side, (255, 255, 255, a), (i, 0), (i, h))
+        pygame.draw.line(side, (255, 255, 255, a), (w - 1 - i, 0), (w - 1 - i, h))
+    img.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    img.blit(side, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    return img
+
+
+def load_speaker_bust(key):
+    """화자 초상(에셋 키)을 좌측 버스트로 로드 (페더링, 캐시)."""
+    ck = ("sbust", key)
+    if ck in _IMG_CACHE:
+        return _IMG_CACHE[ck]
+    path = _find_asset(key)
+    img = None
+    if path:
+        try:
+            img = _feather_bust(_safe_load(path).convert_alpha())
+        except Exception as e:
+            print(f"[경고] 화자 초상 로드 실패 {path}: {e}")
+    _IMG_CACHE[ck] = img
+    return img
+
+
+def draw_player_bust():
+    """플레이어 대사 시 좌측에 세워지는 초상(유화풍)."""
+    img = load_player_portrait(profile.get("portrait", 0))
+    rect = img.get_rect()
+    rect.midbottom = (int(WIDTH * 0.16), HEIGHT - 24)
+    screen.blit(img, rect)
+
+
+def draw_speaker_bust(key):
+    """화자(NPC) 대사 시 좌측에 세워지는 초상(유화풍)."""
+    img = load_speaker_bust(key)
+    if img is None:
+        return
+    rect = img.get_rect()
+    rect.midbottom = (int(WIDTH * 0.16), HEIGHT - 24)
+    screen.blit(img, rect)
+
+
 def draw_scene_base(vignette=True):
     if Scene.bg_key:
         screen.blit(load_bg(Scene.bg_key), (0, 0))
     else:
         screen.fill(INK)
-    if Scene.char_key:
+    # 좌측 화자 버스트 : 대사 중에는 말하는 인물이 왼쪽에 등장
+    left_player = _player_turn and profile.get("name")
+    left_npc = (not _player_turn) and _speaker_portrait
+    if Scene.char_key and not (left_player or left_npc):
+        # 대사 화자 버스트가 없을 때(내레이션 등)만 중앙 장면 인물 노출
         img = load_char(Scene.char_key)
         xpos = {"left": 0.28, "center": 0.5, "right": 0.72}.get(Scene.char_pos, 0.5)
         rect = img.get_rect()
         rect.midbottom = (int(WIDTH * xpos), HEIGHT - 120)
         screen.blit(img, rect)
+    if left_player:
+        draw_player_bust()
+    elif left_npc:
+        draw_speaker_bust(_speaker_portrait)
     if vignette:
         screen.blit(VIGNETTE, (0, 0))
     _draw_letterbox()
@@ -672,27 +1036,66 @@ def _vgrad(surface, rect, top_a, bot_a, color=INK):
 
 
 # ── 상단 HUD ─────────────────────────────────────────
-def _panel(x, y, w, h, alpha=180):
-    p = pygame.Surface((w, h), pygame.SRCALPHA)
-    p.fill((*PANEL_BG, alpha))
-    pygame.draw.rect(p, (90, 84, 72, 150), p.get_rect(), 1, border_radius=10)
-    pygame.draw.rect(p, (*GOLD, 60), (0, 0, w, 2))
-    screen.blit(p, (x, y))
+_PANEL_CACHE = {}
+
+
+def _panel(x, y, w, h, alpha=180, radius=12):
+    """입체감 있는 라운드 패널 (그림자 + 세로 그라데이션 + 이중 테두리)."""
+    body = _PANEL_CACHE.get((w, h, alpha, radius))
+    if body is None:
+        body = pygame.Surface((w, h), pygame.SRCALPHA)
+        top, bot = (36, 33, 28), (15, 14, 12)
+        for i in range(h):
+            t = i / max(1, h - 1)
+            col = (int(top[0] + (bot[0] - top[0]) * t),
+                   int(top[1] + (bot[1] - top[1]) * t),
+                   int(top[2] + (bot[2] - top[2]) * t), alpha)
+            pygame.draw.line(body, col, (0, i), (w, i))
+        mask = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.rect(mask, (255, 255, 255, 255), mask.get_rect(), border_radius=radius)
+        body.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        pygame.draw.rect(body, (0, 0, 0, 150), body.get_rect(), 1, border_radius=radius)
+        inner = body.get_rect().inflate(-2, -2)
+        pygame.draw.rect(body, (*GOLD_SOFT, 120), inner, 1, border_radius=radius - 1)
+        _PANEL_CACHE[(w, h, alpha, radius)] = body
+    shadow = _PANEL_CACHE.get(("sh", w, h, radius))
+    if shadow is None:
+        shadow = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.rect(shadow, (0, 0, 0, 90), shadow.get_rect(), border_radius=radius)
+        _PANEL_CACHE[("sh", w, h, radius)] = shadow
+    screen.blit(shadow, (x + 3, y + 5))
+    screen.blit(body, (x, y))
 
 
 def _bar(x, y, w, val, color, maxv=100, h=8):
+    """가로 그라데이션 + 상단 하이라이트 + 눈금이 있는 스탯 바."""
     r = h // 2
     track = pygame.Surface((w, h), pygame.SRCALPHA)
-    pygame.draw.rect(track, (46, 44, 40, 220), track.get_rect(), border_radius=r)
+    pygame.draw.rect(track, (38, 36, 32, 240), track.get_rect(), border_radius=r)
+    pygame.draw.rect(track, (0, 0, 0, 120), track.get_rect(), 1, border_radius=r)
     screen.blit(track, (x, y))
+    for tk in (0.25, 0.5, 0.75):                 # 눈금
+        tx = x + int(w * tk)
+        pygame.draw.line(screen, (28, 26, 23), (tx, y + 1), (tx, y + h - 1), 1)
     fw = int(w * max(0, min(1, val / maxv)))
     if fw > 0:
         fill = pygame.Surface((fw, h), pygame.SRCALPHA)
-        pygame.draw.rect(fill, (*color, 245), fill.get_rect(), border_radius=r)
-        hi = tuple(min(255, c + 45) for c in color)
-        pygame.draw.rect(fill, (*hi, 130), (0, 0, fw, max(1, h // 2)), border_radius=r)
+        dark = tuple(int(c * 0.5) for c in color)
+        for i in range(fw):
+            t = i / max(1, fw - 1)
+            fill.fill((int(dark[0] + (color[0] - dark[0]) * t),
+                       int(dark[1] + (color[1] - dark[1]) * t),
+                       int(dark[2] + (color[2] - dark[2]) * t), 255),
+                      (i, 0, 1, h))
+        m = pygame.Surface((fw, h), pygame.SRCALPHA)
+        pygame.draw.rect(m, (255, 255, 255, 255), m.get_rect(), border_radius=r)
+        fill.blit(m, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        pygame.draw.rect(fill, (255, 255, 255, 70), (0, 0, fw, max(1, h // 2)), border_radius=r)
         screen.blit(fill, (x, y))
-    pygame.draw.rect(screen, (108, 100, 86), (x, y, w, h), 1, border_radius=r)
+        tipx = x + fw                            # 진행 끝의 밝은 캡
+        cap = tuple(min(255, c + 60) for c in color)
+        pygame.draw.circle(screen, cap, (tipx - r, y + r), max(2, r - 1))
+    pygame.draw.rect(screen, (112, 104, 90), (x, y, w, h), 1, border_radius=r)
 
 
 def _diamond(cx, cy, rad, color, filled=True):
@@ -700,13 +1103,28 @@ def _diamond(cx, cy, rad, color, filled=True):
     pygame.draw.polygon(screen, color, pts, 0 if filled else 1)
 
 
+def _num_badge(bx, by, text, color, align="l"):
+    """숫자 배지 (어두운 라운드 + 색 테두리)."""
+    f = get_font(16, bold=True)
+    ts = f.render(text, True, tuple(min(255, c + 30) for c in color))
+    bw, bh = ts.get_width() + 18, 24
+    x0 = bx if align == "l" else bx - bw
+    s = pygame.Surface((bw, bh), pygame.SRCALPHA)
+    pygame.draw.rect(s, (18, 17, 15, 235), s.get_rect(), border_radius=8)
+    pygame.draw.rect(s, (*color, 170), s.get_rect(), 1, border_radius=8)
+    s.blit(ts, (9, bh // 2 - ts.get_height() // 2))
+    screen.blit(s, (x0, by))
+
+
 def draw_conflict_scale():
-    """갈등 지표 : 중앙에서 양쪽으로 뻗는 대칭 게이지. 더 긴 쪽으로 마음이 기운다."""
+    """갈등 지표 : 인간 ↔ 군인 사이 마음의 긴장을 나타내는 저울(텐션 미터)."""
     x, y, w, h = 20, 16, 336, 150
-    _panel(x, y, w, h, alpha=214)
+    _panel(x, y, w, h, alpha=216)
     cx = x + w // 2
     green, purple = GREEN, STAT_COLOR["사회적역할"]
-    screen.blit(get_font(15, bold=True).render(i18n.ui("conflict_title"), True, GOLD), (x + 16, y + 12))
+
+    pygame.draw.rect(screen, GOLD, (x + 16, y + 14, 3, 16), border_radius=2)
+    screen.blit(get_font(15, bold=True).render(i18n.ui("conflict_title"), True, GOLD), (x + 26, y + 13))
 
     h_val, s_val = conflict["인간"], conflict["군인"]
     scale = max(100, h_val, s_val)
@@ -714,16 +1132,14 @@ def draw_conflict_scale():
     hlen = int(max_ext * min(1.0, h_val / scale))
     slen = int(max_ext * min(1.0, s_val / scale))
 
-    # 값 (막대 위 좌·우)
-    hv = get_font(17, bold=True).render(str(h_val), True, green)
-    sv = get_font(17, bold=True).render(str(s_val), True, purple)
-    screen.blit(hv, (x + 20, y + 36))
-    screen.blit(sv, (x + w - 20 - sv.get_width(), y + 36))
+    _num_badge(x + 18, y + 40, str(h_val), green, "l")
+    _num_badge(x + w - 18, y + 40, str(s_val), purple, "r")
 
-    bar_y, bar_h = y + 66, 16
+    bar_y, bar_h = y + 76, 18
     r = bar_h // 2
     track = pygame.Surface((max_ext * 2 + 4, bar_h), pygame.SRCALPHA)
-    pygame.draw.rect(track, (46, 44, 40, 220), track.get_rect(), border_radius=r)
+    pygame.draw.rect(track, (34, 32, 29, 245), track.get_rect(), border_radius=r)
+    pygame.draw.rect(track, (0, 0, 0, 130), track.get_rect(), 1, border_radius=r)
     screen.blit(track, (cx - max_ext - 2, bar_y))
 
     def _fill(to_right, length, color):
@@ -731,26 +1147,47 @@ def draw_conflict_scale():
             return
         fx = cx if to_right else cx - length
         s = pygame.Surface((length, bar_h), pygame.SRCALPHA)
-        pygame.draw.rect(s, (*color, 245), s.get_rect(), border_radius=r)
-        hi = tuple(min(255, c + 48) for c in color)
-        pygame.draw.rect(s, (*hi, 120), (0, 0, length, bar_h // 2), border_radius=r)
+        for i in range(length):
+            t = i / max(1, length - 1)
+            d = (1 - t) if to_right else t       # 중앙에서 바깥으로의 거리
+            b = 1.0 - d * 0.5                     # 중앙일수록 밝게
+            s.fill((int(color[0] * b), int(color[1] * b), int(color[2] * b), 255),
+                   (i, 0, 1, bar_h))
+        m = pygame.Surface((length, bar_h), pygame.SRCALPHA)
+        pygame.draw.rect(m, (255, 255, 255, 255), m.get_rect(), border_radius=r)
+        s.blit(m, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        pygame.draw.rect(s, (255, 255, 255, 60), (0, 0, length, bar_h // 2), border_radius=r)
         screen.blit(s, (fx, bar_y))
 
     _fill(False, hlen, green)               # 인간(왼쪽)
     _fill(True, slen, purple)               # 군인(오른쪽)
-
-    # 중앙 피벗 + 외곽선
-    pygame.draw.rect(screen, (108, 100, 86),
+    pygame.draw.rect(screen, (112, 104, 90),
                      (cx - max_ext - 2, bar_y, max_ext * 2 + 4, bar_h), 1, border_radius=r)
-    pygame.draw.line(screen, (78, 72, 62), (cx, bar_y - 6), (cx, bar_y + bar_h + 6), 2)
-    _diamond(cx, bar_y + bar_h // 2, 5, GOLD, filled=True)
 
-    # 하단 라벨(색 칩)
+    # 중앙 피벗
+    pygame.draw.line(screen, (86, 80, 68), (cx, bar_y - 4), (cx, bar_y + bar_h + 4), 2)
+
+    # 기울기 표시 노브 : 우세한 쪽으로 이동
+    lean = max(-1.0, min(1.0, (s_val - h_val) / scale))
+    px = cx + int(max_ext * lean)
+    kcol = purple if lean > 0.02 else green if lean < -0.02 else GOLD
+    pygame.draw.polygon(screen, kcol,                     # 아래를 가리키는 삼각형
+                        [(px, bar_y - 3), (px - 6, bar_y - 13), (px + 6, bar_y - 13)])
+    pygame.draw.circle(screen, (16, 15, 13), (px, bar_y + bar_h // 2), r + 2)
+    pygame.draw.circle(screen, kcol, (px, bar_y + bar_h // 2), r)
+    pygame.draw.circle(screen, tuple(min(255, c + 70) for c in kcol),
+                       (px, bar_y + bar_h // 2), max(2, r - 3))
+
+    # 하단 라벨(색 칩) — 우세한 쪽 강조
     lf = get_font(13, bold=True)
     ly = y + h - 26
+    lead_h = lean < -0.02
+    lead_s = lean > 0.02
     pygame.draw.rect(screen, green, (x + 16, ly + 1, 3, 13), border_radius=2)
-    screen.blit(lf.render(i18n.ui("conflict_human"), True, green), (x + 24, ly))
-    ls = lf.render(i18n.ui("conflict_soldier"), True, purple)
+    hc = tuple(min(255, c + 30) for c in green) if lead_h else PARCH_DIM
+    screen.blit(lf.render(i18n.ui("conflict_human"), True, hc), (x + 24, ly))
+    ls = lf.render(i18n.ui("conflict_soldier"), True,
+                   tuple(min(255, c + 30) for c in purple) if lead_s else PARCH_DIM)
     pygame.draw.rect(screen, purple, (x + w - 19, ly + 1, 3, 13), border_radius=2)
     screen.blit(ls, (x + w - 24 - ls.get_width(), ly))
 
@@ -758,7 +1195,9 @@ def draw_conflict_scale():
 def draw_gauges():
     x, w = WIDTH - 272, 256
     y = 16
-    h = 12
+    name_txt = i18n.nm("나")               # 생성한 캐릭터 이름(없으면 '나')
+    name_block = 40
+    h = 12 + name_block
     for gi, (_, keys) in enumerate(HUD_GROUPS):
         if gi > 0:
             h += 16                        # 그룹 사이 구분선 + 여백
@@ -766,6 +1205,20 @@ def draw_gauges():
     h += 58                                # 기억 조각 블록
     _panel(x, y, w, h, alpha=214)
     cy = y + 12
+    # ── 플레이어(캐릭터) 이름 헤더 ──
+    _diamond(x + 20, cy + 12, 5, GOLD, filled=True)
+    ns = name_font(name_txt, 21, bold=True, serif=True)
+    nsurf = ns.render(name_txt, True, PARCH)
+    if nsurf.get_width() > w - 52:
+        ns = name_font(name_txt, 17, bold=True, serif=True)
+        nsurf = ns.render(name_txt, True, PARCH)
+    screen.blit(nsurf, (x + 34, cy + 12 - nsurf.get_height() // 2))
+    sub_txt = f"{i18n.ui(profile.get('grade', 'grade_1'))} · {i18n.ui(profile.get('major', 'maj_ec'))}"
+    subf = get_font(12, bold=True).render(sub_txt, True, GOLD_SOFT)
+    screen.blit(subf, (x + w - 16 - subf.get_width(), cy + 12 - subf.get_height() // 2))
+    cy += 28
+    pygame.draw.line(screen, (*GOLD_SOFT, 110), (x + 14, cy), (x + w - 14, cy), 1)
+    cy += 12
     for gi, (header, keys) in enumerate(HUD_GROUPS):
         if gi > 0:                         # 플레이어 능력치·헨리의 상태 위에도 동일한 구분선
             cy += 6
@@ -778,8 +1231,15 @@ def draw_gauges():
         for k in keys:
             val = stats.get(k, 0)
             screen.blit(get_font(15).render(i18n.stat(k), True, PARCH), (x + 22, cy))
-            vs = get_font(15, bold=True).render(str(val), True, STAT_COLOR[k])
-            screen.blit(vs, (x + w - 16 - vs.get_width(), cy))
+            vs = get_font(14, bold=True).render(str(val), True,
+                                                tuple(min(255, c + 40) for c in STAT_COLOR[k]))
+            bw = vs.get_width() + 14
+            bx = x + w - 16 - bw
+            badge = pygame.Surface((bw, 20), pygame.SRCALPHA)
+            pygame.draw.rect(badge, (0, 0, 0, 150), badge.get_rect(), border_radius=6)
+            pygame.draw.rect(badge, (*STAT_COLOR[k], 130), badge.get_rect(), 1, border_radius=6)
+            badge.blit(vs, (7, 10 - vs.get_height() // 2))
+            screen.blit(badge, (bx, cy - 1))
             _bar(x + 22, cy + 20, w - 40, val, STAT_COLOR[k], h=9)
             cy += 30
     cy += 6
@@ -815,14 +1275,14 @@ def draw_toasts():
 
 
 # ── 상단 언어 선택기 (국기) ──────────────────────────
-_FLAG_W, _FLAG_H, _FLAG_GAP = 40, 26, 12
+_FLAG_W, _FLAG_H, _FLAG_GAP = 30, 20, 8
 
 
 def _lang_rects():
     n = len(i18n.LANGS)
     total = n * _FLAG_W + (n - 1) * _FLAG_GAP
     x0 = WIDTH // 2 - total // 2
-    y = 12
+    y = 14
     return [(pygame.Rect(x0 + i * (_FLAG_W + _FLAG_GAP), y, _FLAG_W, _FLAG_H), code)
             for i, code in enumerate(i18n.LANGS)]
 
@@ -848,11 +1308,11 @@ def _star(surf, color, cx, cy, r):
 
 
 def _flag_surface(code):
-    """각 언어의 국기를 간단한 벡터로 그린 Surface 반환 (캐시)."""
-    ck = ("flag", code)
+    """각 언어의 국기를 간단한 벡터로 그린 Surface 반환 (둥근 모서리, 캐시)."""
+    ck = ("flag", code, _FLAG_W, _FLAG_H)
     if ck in _IMG_CACHE:
         return _IMG_CACHE[ck]
-    w, h = _FLAG_W, _FLAG_H
+    w, h = 40, 26                          # 기준 크기에서 그린 뒤 축소
     s = pygame.Surface((w, h), pygame.SRCALPHA)
     cx, cy = w // 2, h // 2
     if code == "KR":                       # 태극기(간략)
@@ -876,22 +1336,37 @@ def _flag_surface(code):
     elif code == "JP":                     # 일장기
         s.fill((255, 255, 255))
         pygame.draw.circle(s, (200, 40, 55), (cx, cy), 8)
+    s = pygame.transform.smoothscale(s, (_FLAG_W, _FLAG_H)).convert_alpha()
+    mask = pygame.Surface((_FLAG_W, _FLAG_H), pygame.SRCALPHA)
+    pygame.draw.rect(mask, (255, 255, 255, 255), mask.get_rect(), border_radius=4)
+    s.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     _IMG_CACHE[ck] = s
     return s
 
 
 def draw_lang_selector():
-    for rect, code in _lang_rects():
+    rects = _lang_rects()
+    if rects:                              # 국기들을 감싸는 은은한 컨테이너
+        pad = 8
+        x0 = rects[0][0].x - pad
+        x1 = rects[-1][0].right + pad
+        top = rects[0][0].y - 6
+        cont = pygame.Surface((x1 - x0, _FLAG_H + 12), pygame.SRCALPHA)
+        cont.fill((16, 15, 13, 150))
+        pygame.draw.rect(cont, (*GOLD_SOFT, 70), cont.get_rect(), 1, border_radius=13)
+        screen.blit(cont, (x0, top))
+    for rect, code in rects:
         active = (code == i18n.current)
         flag = _flag_surface(code)
         if not active:
             flag = flag.copy()
-            flag.set_alpha(120)
+            flag.set_alpha(110)
+        if active:                         # 선택된 국기: 살짝 위로 떠오르고 금색 글로우
+            glow = rect.inflate(8, 8)
+            pygame.draw.rect(screen, (*GOLD, 60), glow, border_radius=6)
         screen.blit(flag, rect.topleft)
-        border = GOLD if active else (90, 86, 78)
-        pygame.draw.rect(screen, border, rect, 2 if active else 1)
-        lbl = get_font(12, bold=True).render(code, True, GOLD if active else GRAY)
-        screen.blit(lbl, lbl.get_rect(center=(rect.centerx, rect.bottom + 9)))
+        pygame.draw.rect(screen, GOLD if active else (86, 82, 74),
+                         rect, 2 if active else 1, border_radius=4)
 
 
 def _on_lang(pos):
@@ -918,7 +1393,7 @@ def draw_dialog_box(name, text, name_color, text_color, serif=True, done=True):
     mx = 120
     text_top = HEIGHT - 168
     if name:
-        nf = get_font(24, bold=True, serif=True)
+        nf = name_font(name, 24, bold=True, serif=True)
         ns = nf.render(name, True, name_color)
         screen.blit(ns, (mx, HEIGHT - 236))
         # 이름 밑줄 : 이름 글자 아래로 충분히 내려, 본문/이름과 겹치지 않게
@@ -1005,6 +1480,9 @@ def _log_line(speaker, src, mono):
 def show_text(src, speaker=None, mono=False, narr_color=PARCH, serif=True):
     """대사 출력. 원문(src)을 매 프레임 현재 언어로 번역하므로,
     재생 중 국기를 눌러 언어를 바꾸면 화면의 대사가 '즉시' 바뀐다."""
+    global _player_turn, _speaker_portrait
+    _player_turn = (speaker == "나")
+    _speaker_portrait = resolve_speaker_portrait(speaker, src)
     _log_line(speaker, src, mono)
     lang = None
     full = ""
@@ -1023,6 +1501,8 @@ def show_text(src, speaker=None, mono=False, narr_color=PARCH, serif=True):
                 if not done:
                     revealed, done = len(full), True
                 else:
+                    _player_turn = False
+                    _speaker_portrait = None
                     return
         if not done:
             if pause > 0:
@@ -1885,12 +2365,157 @@ def show_final_question():
         pygame.display.flip()
 
 
+def _analysis_data():
+    """사전 설문 답과 게임 결과(엔딩·저울·스탯)를 대조한 데이터."""
+    code = determine_ending()
+    h, s = conflict["인간"], conflict["군인"]
+    C = stats.get("용기", 0); G = stats.get("죄책감", 0)
+    I = stats.get("인간본능", 0); E = stats.get("공감", 0)
+    sv = profile.get("survey", {})
+    rows = []                        # (dim_key, pre_key, meas_key, meas_kw, match)
+    a1 = sv.get("q1")
+    if a1 in ("A", "B"):
+        lean = "an_lean_s" if s >= h else "an_lean_h"
+        rows.append(("an_q1dim", "an_q1A" if a1 == "A" else "an_q1B", "an_q1meas",
+                     {"s": s, "h": h, "lean_key": lean},
+                     (a1 == "A" and s >= h) or (a1 == "B" and h >= s)))
+    a2 = sv.get("q2")
+    if a2 in ("A", "B"):
+        cover = (code == "BAD") or (G >= 60) or (C < 60)
+        rows.append(("an_q2dim", "an_q2A" if a2 == "A" else "an_q2B", "an_q2meas",
+                     {"c": C, "g": G, "end_code": code},
+                     (a2 == "A" and not cover) or (a2 == "B" and cover)))
+    a3 = sv.get("q3")
+    if a3 in ("A", "B"):
+        lean = "an_lean_i" if I >= E else "an_lean_e"
+        rows.append(("an_q3dim", "an_q3A" if a3 == "A" else "an_q3B", "an_q3meas",
+                     {"i": I, "e": E, "lean_key": lean},
+                     (a3 == "A" and I >= E) or (a3 == "B" and E >= I)))
+    matches = sum(1 for *_, m in rows if m)
+    return code, h, s, rows, (matches >= 2 if rows else True)
+
+
+def _fmt_meas(meas_key, kw):
+    """분석 계측 문장을 현재 언어로 즉석 조립 (라이브 재번역)."""
+    k = dict(kw)
+    if "lean_key" in k:
+        k["lean"] = i18n.ui(k.pop("lean_key"))
+    if "end_code" in k:
+        k["end"] = i18n.ui("end_" + k.pop("end_code")).split(" ")[0]
+    return i18n.ui(meas_key, **k)
+
+
+def log_result(code, h, s, matches):
+    """플레이 결과를 results.csv 에 누적 기록 (학술 분석/발표용)."""
+    header = ["time", "name", "gender", "grade", "major", "mbti", "q1", "q2", "q3",
+              "ending", "human", "soldier", "trust", "empathy", "instinct",
+              "duty", "guilt", "courage", "fragments", "matches"]
+    sv = profile.get("survey", {})
+    row = [time.strftime("%Y-%m-%d %H:%M:%S"), profile.get("name", ""),
+           profile.get("gender", ""), profile.get("grade", ""), profile.get("major", ""),
+           profile.get("mbti", ""), sv.get("q1", ""), sv.get("q2", ""), sv.get("q3", ""),
+           code, h, s, stats.get("신뢰", 0), stats.get("공감", 0), stats.get("인간본능", 0),
+           stats.get("사회적역할", 0), stats.get("죄책감", 0), stats.get("용기", 0),
+           len(items), matches]
+    try:
+        new = not os.path.exists(RESULT_PATH)
+        with open(RESULT_PATH, "a", encoding="utf-8-sig", newline="") as f:
+            w = csv.writer(f)
+            if new:
+                w.writerow(header)
+            w.writerow(row)
+    except Exception as e:
+        print(f"[경고] 결과 기록 실패: {e}")
+
+
+def show_analysis(code, h, s, rows, consistent):
+    matches = sum(1 for *_, m in rows if m)
+    start = pygame.time.get_ticks()
+    while True:
+        clock.tick(FPS)
+        for event in pygame.event.get():
+            handle_common(event)
+            if is_advance(event) and pygame.time.get_ticks() - start > 500:
+                return
+        screen.fill(INK)
+        _vgrad(screen, (0, 0, WIDTH, 170), 44, 0, color=(40, 34, 26))
+        ttl = i18n.ui("an_title")
+        ts = fit_font(ttl, 33, WIDTH - 460, bold=True, serif=True).render(ttl, True, GOLD)
+        screen.blit(ts, ts.get_rect(midtop=(WIDTH // 2, 52)))
+        # 프로필 + 엔딩 + 저울  (이름은 문자에 맞는 글꼴로 별도 렌더)
+        nm_str = (profile.get("name", "-") or "-") + "   "
+        rest = i18n.ui("an_profile_rest",
+                       gender=i18n.ui(profile.get("gender", "g_x")),
+                       age=i18n.ui(profile.get("grade", "grade_1")),
+                       major=i18n.ui(profile.get("major", "maj_ec")),
+                       mbti=profile.get("mbti", "-"))
+        nsurf = name_font(nm_str, 20, bold=True, serif=True).render(nm_str, True, GOLD_SOFT)
+        rsurf = fit_font(rest, 20, WIDTH - 260 - nsurf.get_width(), serif=True).render(rest, True, PARCH)
+        tot = nsurf.get_width() + rsurf.get_width()
+        px = WIDTH // 2 - tot // 2
+        screen.blit(nsurf, (px, 96))
+        screen.blit(rsurf, (px + nsurf.get_width(), 96 + (nsurf.get_height() - rsurf.get_height()) // 2))
+        end_lbl = f"{i18n.ui('an_ending')} : {i18n.ui(f'end_{code}')}"
+        es = fit_font(end_lbl, 20, WIDTH - 200, bold=True, serif=True).render(end_lbl, True, GOLD_SOFT)
+        screen.blit(es, es.get_rect(midtop=(WIDTH // 2, 124)))
+        scl = f"{i18n.ui('an_scale')} :  {i18n.ui('conflict_human')} {h}   /   {i18n.ui('conflict_soldier')} {s}"
+        ss = fit_font(scl, 18, WIDTH - 200, serif=True).render(scl, True, PARCH_DIM)
+        screen.blit(ss, ss.get_rect(midtop=(WIDTH // 2, 150)))
+        pygame.draw.line(screen, (*GOLD_SOFT, 120), (120, 180), (WIDTH - 120, 180), 1)
+
+        # 문항별 대조
+        y = 192
+        for dim, pre, meas_key, meas_kw, match in rows:
+            meas = _fmt_meas(meas_key, meas_kw)
+            box = pygame.Rect(120, y, WIDTH - 240, 90)
+            surf = pygame.Surface((box.w, box.h), pygame.SRCALPHA)
+            surf.fill((26, 24, 21, 220))
+            pygame.draw.rect(surf, (GREEN if match else GOLD) + (200,), surf.get_rect(), 2, border_radius=10)
+            pygame.draw.rect(surf, (*(GREEN if match else GOLD), 30), (0, 0, 6, box.h))
+            screen.blit(surf, box.topleft)
+            screen.blit(get_font(19, bold=True, serif=True).render(i18n.ui(dim), True, GOLD), (box.x + 18, box.y + 12))
+            verdict = i18n.ui("an_match" if match else "an_diff")
+            vsurf = get_font(17, bold=True).render(verdict, True, GREEN if match else GOLD)
+            screen.blit(vsurf, (box.right - 18 - vsurf.get_width(), box.y + 13))
+            line1 = f"· {i18n.ui('an_pre')}: {i18n.ui(pre)}"
+            line2 = f"· {i18n.ui('an_ingame')}: {meas}"
+            screen.blit(fit_font(line1, 17, box.w - 40, serif=True).render(line1, True, PARCH), (box.x + 18, box.y + 40))
+            screen.blit(fit_font(line2, 17, box.w - 40, serif=True).render(line2, True, PARCH_DIM), (box.x + 18, box.y + 63))
+            y += 98
+
+        # 종합 리포트
+        rep = pygame.Rect(120, y, WIDTH - 240, 88)
+        rsurf = pygame.Surface((rep.w, rep.h), pygame.SRCALPHA); rsurf.fill((34, 30, 24, 235))
+        pygame.draw.rect(rsurf, (*GOLD, 220), rsurf.get_rect(), 2, border_radius=10)
+        screen.blit(rsurf, rep.topleft)
+        screen.blit(get_font(18, bold=True, serif=True).render(
+            f"{i18n.ui('an_summary_title')}  ({matches}/{len(rows)})", True, GOLD), (rep.x + 18, rep.y + 10))
+        summ = i18n.ui("an_sum_consistent" if consistent else "an_sum_mixed")
+        yy = rep.y + 40
+        for ln in wrap_text(summ, get_font(17, serif=True), rep.w - 40):
+            screen.blit(get_font(17, serif=True).render(ln, True, PARCH), (rep.x + 18, yy))
+            yy += 24
+
+        foot = get_font(16).render(i18n.ui("an_footer"), True, GRAY)
+        screen.blit(foot, foot.get_rect(center=(WIDTH // 2, HEIGHT - 26)))
+        draw_lang_selector()
+        pygame.display.flip()
+
+
 def run_ending():
     import story
     code = determine_ending()
     run_nodes(story.ENDINGS.get(code, []))
     show_result(i18n.ui(f"end_{code}"))
     show_final_question()
+    code, h, s, rows, consistent = _analysis_data()
+    log_result(code, h, s, sum(1 for *_, m in rows if m))
+    try:                              # 결과 누적 후 학술 비교 리포트 자동 갱신
+        import analyze
+        analyze.build_report()
+    except Exception as e:
+        print(f"[경고] 분석 리포트 갱신 실패: {e}")
+    show_analysis(code, h, s, rows, consistent)
 
 
 # ────────────────────────────────────────────────────────────────
@@ -1996,6 +2621,7 @@ def _capture_checkpoint(index):
         "amb": _ambience.get("cur"),
         "lang": i18n.current,
         "label": _chapter_label,
+        "profile": json.loads(json.dumps(profile)),   # 딥카피
     })
 
 
@@ -2037,6 +2663,9 @@ def load_game():
         conflict.clear(); conflict.update(data.get("conflict", {"인간": 0, "군인": 0}))
         items[:] = data.get("items", [])
         progress["index"] = int(data.get("index", 0))
+        if data.get("profile"):
+            profile.clear(); profile.update(data["profile"])
+            apply_profile_name()
         sc = data.get("scene", {})
         Scene.bg_key = sc.get("bg")
         Scene.char_key = sc.get("char")
@@ -2098,6 +2727,284 @@ def run_story_from(start_index=0):
             i += 1
     finally:
         in_game = False
+
+
+# ── 캐릭터 만들기 / 성향 설문 ─────────────────────────
+def _cc_common(event):
+    """생성 화면 공통 이벤트 : 종료 / 취소(ESC) / 언어 전환."""
+    if event.type == pygame.QUIT:
+        pygame.quit(); sys.exit(0)
+    if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+        return "title"
+    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        for rect, code in _lang_rects():
+            if rect.collidepoint(event.pos):
+                if code != i18n.current:
+                    i18n.set_lang(code); save_settings()
+                play_sfx("click")
+                return "lang"
+    return None
+
+
+def _cc_button(rect, label, on, hover, serif=False, fs=20):
+    surf = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+    surf.fill((46, 42, 34, 252) if on else (34, 34, 40, 235) if hover else (20, 19, 17, 220))
+    pygame.draw.rect(surf, GOLD if on else (104, 98, 86) if hover else (78, 74, 66),
+                     surf.get_rect(), 2, border_radius=9)
+    screen.blit(surf, rect.topleft)
+    f = fit_font(label, fs, rect.w - 14, serif=serif)
+    ts = f.render(label, True, GOLD if on else PARCH)
+    screen.blit(ts, ts.get_rect(center=rect.center))
+
+
+def _cc_options(x, y, keys, cur, cw, ch, gap, cols, mx, my, translate=True):
+    hits = []
+    for i, k in enumerate(keys):
+        r = pygame.Rect(x + (i % cols) * (cw + gap), y + (i // cols) * (ch + gap), cw, ch)
+        _cc_button(r, i18n.ui(k) if translate else k, k == cur, r.collidepoint(mx, my))
+        hits.append((r, k))
+    return hits
+
+
+def _cc_section(label, x, y):
+    screen.blit(get_font(19, bold=True, serif=True).render(label, True, GOLD), (x, y))
+
+
+def _draw_swatches(x, y, cur_idx, mx, my):
+    hits = []
+    for i, col in enumerate(HAIR_COLORS):
+        r = pygame.Rect(x + i * 46, y, 36, 36)
+        pygame.draw.rect(screen, col, r, border_radius=8)
+        sel = (i == cur_idx)
+        pygame.draw.rect(screen, GOLD if sel else (90, 84, 74),
+                         r.inflate(6, 6), 3 if sel else 1, border_radius=10)
+        hits.append((r, i))
+    return hits
+
+
+def _cc_page_info():
+    """1페이지 : 이름·성별·나이·전공·MBTI + 외형 미리보기. 반환 'next'/'title'."""
+    name_active = False
+    caret_on = True; caret_t = pygame.time.get_ticks()
+    Scene.bg_key = "bg1"; Scene.char_key = None
+    while True:
+        clock.tick(FPS)
+        mx, my = pygame.mouse.get_pos()
+        nmax = NAME_MAX.get(i18n.current, 6)
+        hot = {}                                  # (kind, value) → rect
+
+        # ── 렌더 ──
+        draw_scene_base(vignette=False)
+        ov = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA); ov.fill((10, 9, 8, 205))
+        screen.blit(ov, (0, 0))
+        title = i18n.ui("cc_title")
+        ts = fit_font(title, 38, WIDTH - 460, bold=True, serif=True).render(title, True, GOLD)
+        screen.blit(ts, ts.get_rect(midtop=(WIDTH // 2, 54)))
+        sub = get_font(17, serif=True).render(i18n.ui("cc_subtitle"), True, PARCH_DIM)
+        screen.blit(sub, sub.get_rect(midtop=(WIDTH // 2, 98)))
+
+        # 왼쪽 : 유화풍 초상 선택 (큰 미리보기 + 썸네일 격자)
+        panel = pygame.Rect(64, 120, 372, 540)
+        _panel(panel.x, panel.y, panel.w, panel.h, alpha=200)
+        prev = portrait_cameo(profile["portrait"], 190, 244, radius=14)
+        screen.blit(prev, prev.get_rect(midtop=(panel.centerx, panel.y + 12)))
+        _cc_section(i18n.ui("cc_portrait"), panel.x + 24, panel.y + 272)
+        cols, gap = 4, 8
+        tw = (panel.w - 48 - (cols - 1) * gap) // cols
+        th = int(tw * 1.02)
+        gx = panel.x + 24; gy = panel.y + 300
+        for i in range(PORTRAIT_COUNT):
+            r = pygame.Rect(gx + (i % cols) * (tw + gap), gy + (i // cols) * (th + gap), tw, th)
+            screen.blit(portrait_cameo(i, tw, th, radius=7), r.topleft)
+            sel = (i == profile["portrait"])
+            if sel or r.collidepoint(mx, my):
+                pygame.draw.rect(screen, GOLD if sel else PARCH_DIM, r, 3, border_radius=7)
+            hot[("portrait", i)] = r
+
+        # 오른쪽 : 이름 / 성별 / 학년 / 전공 / MBTI
+        rx = 470; ry = 132
+        _cc_section(i18n.ui("cc_name"), rx, ry)
+        nbox = pygame.Rect(rx, ry + 26, 740, 48)
+        pygame.draw.rect(screen, (18, 17, 15), nbox, border_radius=8)
+        pygame.draw.rect(screen, GOLD if name_active else (100, 94, 82), nbox, 2, border_radius=8)
+        nm_txt = profile["name"] or ""
+        if nm_txt:
+            nsurf = name_font(nm_txt, 26, serif=True).render(nm_txt, True, PARCH)
+        else:
+            nsurf = get_font(20, serif=True).render(i18n.ui("cc_name_ph", n=nmax), True, GRAY)
+        screen.blit(nsurf, (nbox.x + 14, nbox.centery - nsurf.get_height() // 2))
+        if name_active and caret_on:
+            cxp = nbox.x + 14 + (nsurf.get_width() if nm_txt else 0) + 2
+            pygame.draw.line(screen, PARCH, (cxp, nbox.y + 10), (cxp, nbox.bottom - 10), 2)
+        hot[("name", None)] = nbox
+
+        _cc_section(i18n.ui("cc_gender"), rx, ry + 92)
+        for r, k in _cc_options(rx, ry + 118, GENDER_KEYS, profile["gender"], 150, 40, 12, 3, mx, my):
+            hot[("gender", k)] = r
+        _cc_section(i18n.ui("cc_grade"), rx, ry + 178)
+        for r, k in _cc_options(rx, ry + 204, GRADE_KEYS, profile["grade"], 150, 40, 12, 3, mx, my):
+            hot[("grade", k)] = r
+        _cc_section(i18n.ui("cc_major"), rx, ry + 264)
+        for r, k in _cc_options(rx, ry + 290, MAJOR_KEYS, profile["major"], 130, 40, 12, 4, mx, my):
+            hot[("major", k)] = r
+        _cc_section(i18n.ui("cc_mbti"), rx, ry + 352)
+        for r, k in _cc_options(rx, ry + 378, MBTI_TYPES, profile["mbti"], 86, 34, 8, 8, mx, my, translate=False):
+            hot[("mbti", k)] = r
+
+        # 하단 버튼
+        rnd = pygame.Rect(rx, HEIGHT - 66, 150, 46)
+        nxt = pygame.Rect(WIDTH - 250, HEIGHT - 66, 180, 46)
+        _cc_button(rnd, i18n.ui("cc_random"), False, rnd.collidepoint(mx, my))
+        ok_name = bool(profile["name"].strip())
+        _cc_button(nxt, i18n.ui("cc_next"), ok_name, nxt.collidepoint(mx, my))
+        hint = get_font(15).render(i18n.ui("cc_hint"), True, GRAY)
+        screen.blit(hint, (70, HEIGHT - 30))
+        draw_lang_selector()
+        pygame.display.flip()
+
+        if pygame.time.get_ticks() - caret_t > 480:
+            caret_on = not caret_on; caret_t = pygame.time.get_ticks()
+
+        # ── 이벤트 ──
+        for event in pygame.event.get():
+            r = _cc_common(event)
+            if r == "title":
+                return "title"
+            if r == "lang":
+                continue
+            if event.type == pygame.TEXTINPUT and name_active:
+                if len(profile["name"]) < nmax:
+                    profile["name"] += event.text
+            elif event.type == pygame.KEYDOWN:
+                if name_active and event.key == pygame.K_BACKSPACE:
+                    profile["name"] = profile["name"][:-1]
+                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                    if profile["name"].strip():
+                        play_sfx("click"); return "next"
+                    name_active = True
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if nxt.collidepoint(event.pos) and ok_name:
+                    play_sfx("click"); return "next"
+                if rnd.collidepoint(event.pos):
+                    _randomize_look(); play_sfx("click"); continue
+                clicked_field = False
+                for (kind, val), rect in hot.items():
+                    if rect.collidepoint(event.pos):
+                        clicked_field = True
+                        if kind == "name":
+                            name_active = True
+                        else:
+                            name_active = False
+                            profile[kind] = val          # portrait/gender/grade/major/mbti
+                            play_sfx("click")
+                        break
+                if not clicked_field:
+                    name_active = False
+
+
+def _randomize_look():
+    import random as _r
+    profile["portrait"] = _r.randrange(PORTRAIT_COUNT)
+    profile["gender"] = _r.choice(GENDER_KEYS)
+    profile["grade"] = _r.choice(GRADE_KEYS)
+    profile["major"] = _r.choice(MAJOR_KEYS)
+    profile["mbti"] = _r.choice(MBTI_TYPES)
+
+
+def _cc_page_survey():
+    """2페이지 : 성향 설문 3문항. 반환 'done'/'back'/'title'."""
+    qs = [("q1_t", "q1_a", "q1_b"), ("q2_t", "q2_a", "q2_b"), ("q3_t", "q3_a", "q3_b")]
+    keys = ["q1", "q2", "q3"]
+    idx = 0
+    while idx < len(qs):
+        qt, qa, qb = qs[idx]
+        while True:
+            clock.tick(FPS)
+            mx, my = pygame.mouse.get_pos()
+            draw_scene_base(vignette=False)
+            ov = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA); ov.fill((10, 9, 8, 214))
+            screen.blit(ov, (0, 0))
+            ttl = i18n.ui("sv_title")
+            ts = fit_font(ttl, 36, WIDTH - 460, bold=True, serif=True).render(ttl, True, GOLD)
+            screen.blit(ts, ts.get_rect(midtop=(WIDTH // 2, 54)))
+            intro = get_font(17, serif=True).render(i18n.ui("sv_intro"), True, PARCH_DIM)
+            screen.blit(intro, intro.get_rect(midtop=(WIDTH // 2, 100)))
+            prog = get_font(17, bold=True).render(i18n.ui("sv_progress", i=idx + 1, n=len(qs)), True, GOLD_SOFT)
+            screen.blit(prog, prog.get_rect(midtop=(WIDTH // 2, 130)))
+
+            qf = get_font(25, serif=True)
+            qy = 190
+            for line in wrap_text(i18n.ui(qt), qf, WIDTH - 260):
+                ls = qf.render(line, True, PARCH)
+                screen.blit(ls, ls.get_rect(midtop=(WIDTH // 2, qy)))
+                qy += 38
+            cur = profile["survey"][keys[idx]]
+            aR = pygame.Rect(WIDTH // 2 - 470, 420, 460, 150)
+            bR = pygame.Rect(WIDTH // 2 + 10, 420, 460, 150)
+            for tag, rect, txt in (("A", aR, i18n.ui(qa)), ("B", bR, i18n.ui(qb))):
+                on = (cur == tag); hover = rect.collidepoint(mx, my)
+                surf = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+                surf.fill((46, 42, 34, 250) if on else (30, 30, 36, 235) if hover else (20, 19, 17, 220))
+                pygame.draw.rect(surf, GOLD if on else (104, 98, 86) if hover else (80, 76, 66),
+                                 surf.get_rect(), 2, border_radius=12)
+                screen.blit(surf, rect.topleft)
+                tagc = get_font(30, bold=True, serif=True).render(tag, True, GOLD if on else GOLD_SOFT)
+                screen.blit(tagc, (rect.x + 20, rect.y + 16))
+                tf = get_font(20, serif=True)
+                tyy = rect.y + 20
+                for line in wrap_text(txt, tf, rect.w - 90):
+                    screen.blit(tf.render(line, True, PARCH), (rect.x + 66, tyy))
+                    tyy += 30
+            back = pygame.Rect(70, HEIGHT - 66, 160, 46)
+            _cc_button(back, i18n.ui("cc_prev"), False, back.collidepoint(mx, my))
+            draw_lang_selector()
+            pygame.display.flip()
+
+            advanced = False
+            for event in pygame.event.get():
+                r = _cc_common(event)
+                if r == "title":
+                    return "title"
+                if r == "lang":
+                    continue
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if aR.collidepoint(event.pos):
+                        profile["survey"][keys[idx]] = "A"; play_sfx("click"); idx += 1; advanced = True; break
+                    if bR.collidepoint(event.pos):
+                        profile["survey"][keys[idx]] = "B"; play_sfx("click"); idx += 1; advanced = True; break
+                    if back.collidepoint(event.pos):
+                        play_sfx("click")
+                        if idx == 0:
+                            return "back"
+                        idx -= 1; advanced = True; break
+            if advanced:
+                break
+    return "done"
+
+
+def create_character():
+    """캐릭터 생성 전체 흐름. 완료 시 True, 취소 시 False(타이틀로)."""
+    global profile, _player_turn
+    _player_turn = False
+    profile = default_profile()
+    if load_profile():                            # 직전 캐릭터를 기본값으로 제안
+        profile["survey"] = {"q1": None, "q2": None, "q3": None}
+    pygame.key.start_text_input()
+    try:
+        while True:
+            if _cc_page_info() == "title":
+                return False
+            res = _cc_page_survey()
+            if res == "title":
+                return False
+            if res == "back":
+                continue
+            break
+    finally:
+        pygame.key.stop_text_input()
+    apply_profile_name()
+    save_profile()
+    return True
 
 
 def start_menu():
@@ -2181,6 +3088,8 @@ def main():
             if not load_game():
                 reset_state()
         else:
+            if not create_character():            # 새 이야기 → 캐릭터 생성(취소 시 타이틀로)
+                continue
             reset_state()
         while True:                               # 플레이 중 '불러오기' 재개 처리
             try:

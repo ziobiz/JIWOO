@@ -1,0 +1,47 @@
+import Link from "next/link";
+
+export default function Home() {
+  return (
+    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col">
+      <main className="flex-1 max-w-2xl w-full mx-auto px-6 py-24 flex flex-col items-center text-center gap-12">
+        <div className="space-y-4">
+          <p className="text-xs tracking-[0.4em] text-amber-600 uppercase">
+            A Visual Novel
+          </p>
+          <h1 className="text-5xl sm:text-6xl font-serif text-amber-50 leading-tight">
+            붉은 무공훈장
+          </h1>
+          <p className="text-lg text-stone-400 font-serif italic">
+            The Weight of Courage
+          </p>
+          <p className="text-sm text-stone-500 max-w-md mx-auto leading-relaxed pt-4">
+            1863년, 전쟁터에 선 한 청년의 이야기.
+            <br />
+            당신의 선택이 헨리의 용기와 두려움을 결정합니다.
+          </p>
+        </div>
+
+        <Link
+          href="/game"
+          className="rounded-full bg-amber-700 px-12 py-4 text-base font-medium hover:bg-amber-600 transition-colors shadow-lg shadow-amber-900/30"
+        >
+          게임 시작
+        </Link>
+
+        <div className="w-full rounded-xl border border-stone-800 bg-stone-900/60 p-5 text-left">
+          <p className="text-xs text-stone-500 leading-relaxed">
+            이 게임은 교육·연구 목적의 성향 분석을 포함합니다. 시작 화면에서
+            간단한 캐릭터 설정과 설문에 참여하게 되며, 수집된 응답은 익명으로
+            통계 분석에만 사용됩니다.
+          </p>
+        </div>
+      </main>
+
+      <footer className="px-6 py-5 text-center">
+        <p className="text-xs text-stone-700">
+          © The Weight of Courage · 원작 Stephen Crane, 『The Red Badge of Courage』
+        </p>
+      </footer>
+    </div>
+  );
+}

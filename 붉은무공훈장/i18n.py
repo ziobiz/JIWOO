@@ -15,11 +15,19 @@ LANGS = ["KR", "EN", "CH", "JP"]          # 상단 국기 표시 순서
 LANG_NATIVE = {"KR": "한국어", "EN": "English", "CH": "中文", "JP": "日本語"}
 current = "KR"
 
+# 플레이어가 만든 캐릭터 이름 — 설정되면 화자 "나" 대신 이 이름을 표시
+player_name = ""
+
 
 def set_lang(code):
     global current
     if code in LANGS:
         current = code
+
+
+def set_player_name(name):
+    global player_name
+    player_name = (name or "").strip()
 
 
 # ── 화자 이름 ────────────────────────────────────────
@@ -132,6 +140,137 @@ UI = {
     "end_NORMAL": {"KR": "NORMAL END 「정답 없는 질문」",   "EN": "NORMAL END — A Question Without Answer","CH": "NORMAL END 「没有答案的问题」","JP": "NORMAL END 「答えのない問い」"},
     "end_BAD":    {"KR": "BAD END 「붉은 무공훈장」",       "EN": "BAD END — The Red Badge of Courage",   "CH": "BAD END 「红色英勇勋章」",  "JP": "BAD END 「赤い武功章」"},
     "end_HIDDEN": {"KR": "HIDDEN END 「인간이라는 이름」",  "EN": "HIDDEN END — The Name of Human",       "CH": "HIDDEN END 「名为人类」",  "JP": "HIDDEN END 「人間という名」"},
+
+    # ── 캐릭터 만들기 ──
+    "cc_title":   {"KR": "나의 캐릭터 만들기", "EN": "Create Your Character", "CH": "创建你的角色", "JP": "あなたのキャラクターを作る"},
+    "cc_subtitle":{"KR": "이 이야기에 참여할 '나'를 설정합니다", "EN": "Set up the 'you' who will enter this story", "CH": "设定将进入这个故事的“你”", "JP": "この物語に入る「あなた」を設定します"},
+    "cc_name":    {"KR": "이름", "EN": "Name", "CH": "名字", "JP": "名前"},
+    "cc_name_ph": {"KR": "이름을 입력하세요 (최대 {n}자)", "EN": "Enter your name (max {n})", "CH": "请输入名字（最多 {n} 字）", "JP": "名前を入力（最大 {n} 文字）"},
+    "cc_gender":  {"KR": "성별", "EN": "Gender", "CH": "性别", "JP": "性別"},
+    "cc_age":     {"KR": "나이", "EN": "Age", "CH": "年龄", "JP": "年齢"},
+    "cc_grade":   {"KR": "학년", "EN": "Year", "CH": "年级", "JP": "学年"},
+    "cc_portrait":{"KR": "초상 선택", "EN": "Choose Portrait", "CH": "选择肖像", "JP": "肖像を選ぶ"},
+    "grade_1":    {"KR": "1학년", "EN": "Year 1", "CH": "1年级", "JP": "1年生"},
+    "grade_2":    {"KR": "2학년", "EN": "Year 2", "CH": "2年级", "JP": "2年生"},
+    "grade_3":    {"KR": "3학년", "EN": "Year 3", "CH": "3年级", "JP": "3年生"},
+    "cc_major":   {"KR": "전공", "EN": "Major", "CH": "专业", "JP": "専攻"},
+    "cc_mbti":    {"KR": "MBTI", "EN": "MBTI", "CH": "MBTI", "JP": "MBTI"},
+    "cc_look":    {"KR": "외형 꾸미기", "EN": "Appearance", "CH": "外形装扮", "JP": "外見の設定"},
+    "cc_hair":    {"KR": "머리 스타일", "EN": "Hair", "CH": "发型", "JP": "髪型"},
+    "cc_glasses": {"KR": "안경", "EN": "Glasses", "CH": "眼镜", "JP": "メガネ"},
+    "cc_band":    {"KR": "헤어밴드", "EN": "Hairband", "CH": "发箍", "JP": "ヘアバンド"},
+    "cc_face":    {"KR": "얼굴형", "EN": "Face", "CH": "脸型", "JP": "顔の形"},
+    "cc_haircol": {"KR": "머리 색", "EN": "Hair Color", "CH": "发色", "JP": "髪の色"},
+    "cc_random":  {"KR": "랜덤", "EN": "Random", "CH": "随机", "JP": "ランダム"},
+    "cc_next":    {"KR": "다음  ›", "EN": "Next  ›", "CH": "下一步  ›", "JP": "次へ  ›"},
+    "cc_prev":    {"KR": "‹  이전", "EN": "‹  Back", "CH": "‹  上一步", "JP": "‹  戻る"},
+    "cc_start":   {"KR": "이 캐릭터로 시작", "EN": "Start with this character", "CH": "以此角色开始", "JP": "このキャラで始める"},
+    "cc_need_name": {"KR": "이름을 입력해 주세요", "EN": "Please enter a name", "CH": "请输入名字", "JP": "名前を入力してください"},
+    "cc_hint":    {"KR": "클릭하여 선택  ·  이름 칸을 눌러 입력  ·  Enter 다음",
+                   "EN": "Click to choose  ·  click the name box to type  ·  Enter next",
+                   "CH": "点击选择  ·  点名字框输入  ·  Enter 下一步",
+                   "JP": "クリックで選択  ·  名前欄をクリックで入力  ·  Enter 次へ"},
+    "opt_on":     {"KR": "있음", "EN": "On", "CH": "有", "JP": "あり"},
+    "opt_off":    {"KR": "없음", "EN": "Off", "CH": "无", "JP": "なし"},
+    "g_m":  {"KR": "남", "EN": "Male", "CH": "男", "JP": "男"},
+    "g_f":  {"KR": "여", "EN": "Female", "CH": "女", "JP": "女"},
+    "g_x":  {"KR": "선택 안 함", "EN": "Prefer not", "CH": "不选择", "JP": "回答しない"},
+    "age_h1": {"KR": "고1", "EN": "10th gr.", "CH": "高一", "JP": "高1"},
+    "age_h2": {"KR": "고2", "EN": "11th gr.", "CH": "高二", "JP": "高2"},
+    "age_h3": {"KR": "고3", "EN": "12th gr.", "CH": "高三", "JP": "高3"},
+    "age_20": {"KR": "20대", "EN": "20s", "CH": "20多岁", "JP": "20代"},
+    "age_30": {"KR": "30대", "EN": "30s", "CH": "30多岁", "JP": "30代"},
+    "age_40": {"KR": "40대", "EN": "40s", "CH": "40多岁", "JP": "40代"},
+    "age_50": {"KR": "50대", "EN": "50s", "CH": "50多岁", "JP": "50代"},
+    "age_60": {"KR": "60대", "EN": "60s", "CH": "60多岁", "JP": "60代"},
+    "maj_ec": {"KR": "영중", "EN": "Eng-Chi", "CH": "英中", "JP": "英中"},
+    "maj_ej": {"KR": "영일", "EN": "Eng-Jpn", "CH": "英日", "JP": "英日"},
+    "maj_ch": {"KR": "중국어", "EN": "Chinese", "CH": "中文", "JP": "中国語"},
+    "maj_jp": {"KR": "일본어", "EN": "Japanese", "CH": "日语", "JP": "日本語"},
+    "face_round":  {"KR": "둥근형", "EN": "Round", "CH": "圆形", "JP": "丸型"},
+    "face_square": {"KR": "각진형", "EN": "Square", "CH": "方形", "JP": "四角"},
+
+    # ── 성향 설문 (사전) ──
+    "sv_title":  {"KR": "나의 성향 테스트", "EN": "My Tendency Test", "CH": "我的倾向测试", "JP": "わたしの傾向テスト"},
+    "sv_intro":  {"KR": "게임 전, 가벼운 질문 3가지. 정답은 없습니다.",
+                  "EN": "Three light questions before we begin. There are no right answers.",
+                  "CH": "开始前的三个小问题。没有标准答案。",
+                  "JP": "始める前に、軽い3つの質問。正解はありません。"},
+    "sv_pick":   {"KR": "A 와 B 중 하나를 고르세요", "EN": "Choose A or B", "CH": "请在 A 与 B 中选择", "JP": "A か B を選んでください"},
+    "sv_progress": {"KR": "질문 {i} / {n}", "EN": "Question {i} / {n}", "CH": "问题 {i} / {n}", "JP": "質問 {i} / {n}"},
+    "q1_t": {"KR": "당신은 학급 반장입니다. 평소 성실하지만 오늘따라 몸이 아파 지각한 친구가 있습니다. 원칙대로라면 예외 없이 벌점을 줘야 합니다. 당신의 선택은?",
+             "EN": "You are the class monitor. A usually diligent friend is late today because they're ill. By the rules, you must give a penalty with no exception. Your choice?",
+             "CH": "你是班长。一位平时认真的朋友今天因身体不适而迟到。按规定必须一视同仁地记过。你的选择是？",
+             "JP": "あなたは学級委員長。普段は真面目な友人が、今日は体調が悪くて遅刻しました。原則では例外なく罰点を与えるべきです。あなたの選択は？"},
+    "q1_a": {"KR": "원칙은 원칙이다. 규칙대로 벌점을 준다.", "EN": "Rules are rules. Give the penalty.", "CH": "原则就是原则，照规矩记过。", "JP": "原則は原則。規則どおり罰点を与える。"},
+    "q1_b": {"KR": "친구의 사정을 이해하고 이번 한 번만 눈감아 준다.", "EN": "Understand their situation and let it slide just this once.", "CH": "体谅朋友的处境，这一次睁一只眼闭一只眼。", "JP": "友人の事情を汲んで、今回だけ見逃す。"},
+    "q2_t": {"KR": "나의 치명적 실수를 아무도 모릅니다. 조용히 덮으면 모두가 나를 칭송하지만, 솔직히 고백하면 큰 질타를 받습니다. 당신의 선택은?",
+             "EN": "No one knows your fatal mistake. Bury it quietly and everyone praises you; confess honestly and you face harsh blame. Your choice?",
+             "CH": "没有人知道你的致命失误。悄悄掩盖，众人便会称赞你；如实坦白，则会遭到严厉指责。你的选择是？",
+             "JP": "あなたの致命的なミスを誰も知りません。黙って隠せば皆に称賛され、正直に告白すれば激しく責められます。あなたの選択は？"},
+    "q2_a": {"KR": "비난을 받더라도 솔직하게 진실을 밝힌다.", "EN": "Tell the truth honestly, even if blamed.", "CH": "即使被指责，也如实说出真相。", "JP": "非難されても正直に真実を明かす。"},
+    "q2_b": {"KR": "조용히 묻어두고 칭찬과 평판을 유지한다.", "EN": "Bury it quietly and keep the praise and reputation.", "CH": "悄悄掩盖，维持赞誉与名声。", "JP": "静かに隠し、称賛と評判を保つ。"},
+    "q3_t": {"KR": "가장 중요한 기말고사 전날 새벽, 친한 친구가 심각한 고민으로 울며 전화했습니다. 내일 시험이 입시를 좌우합니다. 당신의 선택은?",
+             "EN": "The dawn before your most important final exam, a close friend calls in tears over a serious worry. Tomorrow's exam could decide your future. Your choice?",
+             "CH": "最重要的期末考前一天凌晨，好友因严重烦恼哭着打来电话。明天的考试将左右你的升学。你的选择是？",
+             "JP": "最も大切な期末試験の前夜、親友が深刻な悩みで泣きながら電話してきました。明日の試験は進路を左右します。あなたの選択は？"},
+    "q3_a": {"KR": "내일 시험이 더 중요하므로, 미안하지만 내일 이야기하자고 한다.", "EN": "Tomorrow's exam matters more — apologize and say let's talk tomorrow.", "CH": "明天的考试更重要，抱歉地说明天再聊。", "JP": "明日の試験が大事だから、悪いけど明日話そうと言う。"},
+    "q3_b": {"KR": "내 성적이 떨어질 각오를 하더라도, 친구의 이야기를 끝까지 들어준다.", "EN": "Even at the cost of my grades, listen to my friend to the end.", "CH": "哪怕成绩下滑，也把朋友的话听到最后。", "JP": "成績が下がる覚悟でも、友人の話を最後まで聞く。"},
+
+    # ── 교차 분석 ──
+    "an_title":  {"KR": "성향 × 선택 교차 분석", "EN": "Tendency × Choices — Cross Analysis", "CH": "倾向 × 选择 交叉分析", "JP": "傾向 × 選択 クロス分析"},
+    "an_profile":{"KR": "{name}  ·  {gender} · {age} · {major} · {mbti}",
+                  "EN": "{name}  ·  {gender} · {age} · {major} · {mbti}",
+                  "CH": "{name}  ·  {gender} · {age} · {major} · {mbti}",
+                  "JP": "{name}  ·  {gender} · {age} · {major} · {mbti}"},
+    "an_profile_rest": {"KR": "· {gender} · {age} · {major} · {mbti}",
+                        "EN": "· {gender} · {age} · {major} · {mbti}",
+                        "CH": "· {gender} · {age} · {major} · {mbti}",
+                        "JP": "· {gender} · {age} · {major} · {mbti}"},
+    "an_ending": {"KR": "도달한 엔딩", "EN": "Ending reached", "CH": "抵达的结局", "JP": "到達したエンディング"},
+    "an_scale":  {"KR": "갈등의 저울", "EN": "Scale of Conflict", "CH": "冲突的天平", "JP": "葛藤の天秤"},
+    "an_pre":    {"KR": "사전 성향", "EN": "Pre-survey", "CH": "事前倾向", "JP": "事前の傾向"},
+    "an_ingame": {"KR": "게임 속 결과", "EN": "In-game result", "CH": "游戏中的结果", "JP": "ゲーム内の結果"},
+    "an_match":  {"KR": "예측과 일치", "EN": "Matches prediction", "CH": "与预测一致", "JP": "予測と一致"},
+    "an_diff":   {"KR": "예측과 다른 반전", "EN": "A reversal", "CH": "出现反转", "JP": "予測と異なる反転"},
+    "an_q1dim":  {"KR": "원칙 vs 공감", "EN": "Principle vs Empathy", "CH": "原则 vs 共情", "JP": "原則 vs 共感"},
+    "an_q2dim":  {"KR": "가짜 명예 vs 진정한 용기", "EN": "False Honor vs True Courage", "CH": "虚假荣誉 vs 真正勇气", "JP": "偽りの名誉 vs 本当の勇気"},
+    "an_q3dim":  {"KR": "개인의 안위 vs 이타심", "EN": "Self vs Altruism", "CH": "个人安危 vs 利他", "JP": "自己の安寧 vs 利他"},
+    "an_q1A":    {"KR": "원칙(군인)을 택함", "EN": "chose principle (soldier)", "CH": "选择原则（军人）", "JP": "原則（軍人）を選択"},
+    "an_q1B":    {"KR": "공감(인간)을 택함", "EN": "chose empathy (human)", "CH": "选择共情（人）", "JP": "共感（人間）を選択"},
+    "an_q2A":    {"KR": "진실·용기를 택함", "EN": "chose truth & courage", "CH": "选择真相与勇气", "JP": "真実・勇気を選択"},
+    "an_q2B":    {"KR": "명예 유지를 택함", "EN": "chose to keep honor", "CH": "选择维持名誉", "JP": "名誉維持を選択"},
+    "an_q3A":    {"KR": "개인의 안위를 택함", "EN": "chose self-interest", "CH": "选择个人安危", "JP": "自己の安寧を選択"},
+    "an_q3B":    {"KR": "이타·희생을 택함", "EN": "chose altruism", "CH": "选择利他与牺牲", "JP": "利他・犠牲を選択"},
+    "an_q1meas": {"KR": "게임에서 '군인' {s} · '인간' {h} » {lean} 쪽이 더 무거움",
+                  "EN": "In game: soldier {s} · human {h} » leaned toward {lean}",
+                  "CH": "游戏中：军人 {s} · 人 {h} » 更偏向 {lean}",
+                  "JP": "ゲーム内：軍人 {s} · 人間 {h} » {lean} 側が重い"},
+    "an_q2meas": {"KR": "용기 {c} · 죄책감 {g} · 엔딩 {end}",
+                  "EN": "Courage {c} · Guilt {g} · Ending {end}",
+                  "CH": "勇气 {c} · 罪恶感 {g} · 结局 {end}",
+                  "JP": "勇気 {c} · 罪悪感 {g} · エンディング {end}"},
+    "an_q3meas": {"KR": "인간 본능 {i} · 공감 {e} » {lean} 쪽이 강함",
+                  "EN": "Instinct {i} · Empathy {e} » stronger in {lean}",
+                  "CH": "人性本能 {i} · 共情 {e} » {lean} 更强",
+                  "JP": "本能 {i} · 共感 {e} » {lean} が強い"},
+    "an_lean_s": {"KR": "군인", "EN": "soldier", "CH": "军人", "JP": "軍人"},
+    "an_lean_h": {"KR": "인간", "EN": "human", "CH": "人", "JP": "人間"},
+    "an_lean_i": {"KR": "본능", "EN": "instinct", "CH": "本能", "JP": "本能"},
+    "an_lean_e": {"KR": "공감", "EN": "empathy", "CH": "共情", "JP": "共感"},
+    "an_summary_title": {"KR": "종합 리포트", "EN": "Overall Report", "CH": "综合报告", "JP": "総合レポート"},
+    "an_sum_consistent": {"KR": "당신은 사전 성향과 게임 속 선택이 대체로 '일관'되었습니다. 신념이 위기 상황에서도 흔들리지 않는 유형입니다.",
+                          "EN": "Your pre-survey tendencies and in-game choices were largely 'consistent'. Your convictions held steady even under pressure.",
+                          "CH": "你的事前倾向与游戏中的选择大体'一致'。属于在危机中信念也不动摇的类型。",
+                          "JP": "あなたの事前傾向とゲーム内の選択はおおむね「一貫」していました。危機でも信念が揺らがないタイプです。"},
+    "an_sum_mixed":      {"KR": "당신은 사전 성향과 게임 속 선택 사이에 '반전'이 있었습니다. 극한 상황이 평소의 신념과 다른 선택을 이끌어냈습니다.",
+                          "EN": "There were 'reversals' between your survey tendencies and in-game choices. Extreme situations drew out choices different from your usual beliefs.",
+                          "CH": "你的事前倾向与游戏选择之间出现了'反转'。极端处境引出了与平日信念不同的选择。",
+                          "JP": "事前傾向とゲーム内の選択に「反転」がありました。極限状況が普段の信念と異なる選択を引き出したのです。"},
+    "an_footer": {"KR": "이 결과는 results.csv 에 기록되었습니다  ·  클릭하여 종료",
+                  "EN": "This result was logged to results.csv  ·  Click to exit",
+                  "CH": "该结果已记录到 results.csv  ·  点击退出",
+                  "JP": "この結果は results.csv に記録されました  ·  クリックで終了"},
 }
 
 # ── 스토리 텍스트 번역 (원문 KR → EN/CH/JP) ───────────
@@ -770,7 +909,9 @@ def t(text):
 
 
 def nm(name):
-    """화자 이름 번역."""
+    """화자 이름 번역. 화자가 '나'이고 플레이어 이름이 설정돼 있으면 그 이름을 쓴다."""
+    if name == "나" and player_name:
+        return player_name
     if name is None or current == "KR":
         return name
     e = NAMES.get(name)
