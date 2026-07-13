@@ -50,44 +50,62 @@ function loadLocalCsv(): PlayResult[] {
 }
 
 export async function GET(request: Request) {
-  if (!checkAdmin(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  let rows: PlayResult[] = [];
-  let source = "Supabase play_results";
-
-  const admin = getSupabaseAdmin();
-  if (admin) {
-    const { data, error } = await admin
-      .from("play_results")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    if (!checkAdmin(request)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    rows = (data ?? []).map((r) => rowToPlayResult(r));
-  } else {
-    rows = loadLocalCsv();
-    source = "local results.csv (dev fallback)";
-  }
 
-  const report = buildReport(rows, source);
-  return NextResponse.json({
-    ...report,
-    recentPlays: rows.slice(0, 100).map((r) => ({
-      name: r.name,
-      gender: r.gender,
-      grade: r.grade,
-      mbti: r.mbti,
-      ending: r.ending,
-      human: r.human,
-      soldier: r.soldier,
-      courage: r.courage,
-      empathy: r.empathy,
-      fragments: r.fragments,
-      matches: r.matches,
-      created_at: r.created_at,
-    })),
-  });
+    let rows: PlayResult[] = [];
+    let source = "Supabase play_results";
+
+    // 데이터 소스 오류(테이블 부재·키 오류 등)로 로그인을 막지 않는다.
+    // 오류가 나도 관리자는 (빈) 대시보드에 진입하고, 원인은 source에 표시된다.
+    try {
+      const admin = getSupabaseAdmin();
+      if (admin) {
+        const { data, error } = await admin
+          .from("play_results")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (error) {
+          source = `Supabase 오류: ${error.message} (schema.sql로 play_results 테이블을 생성했는지 확인하세요)`;
+        } else {
+          rows = (data ?? []).map((r) => rowToPlayResult(r));
+        }
+      } else {
+        rows = loadLocalCsv();
+        source = rows.length
+          ? "local results.csv (dev fallback)"
+          : "데이터 없음 · Supabase 미설정(환경변수 NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)";
+      }
+    } catch (srcErr) {
+      source = `데이터 소스 연결 오류: ${
+        srcErr instanceof Error ? srcErr.message : String(srcErr)
+      }`;
+    }
+
+    const report = buildReport(rows, source);
+    return NextResponse.json({
+      ...report,
+      recentPlays: rows.slice(0, 100).map((r) => ({
+        name: r.name,
+        gender: r.gender,
+        grade: r.grade,
+        mbti: r.mbti,
+        ending: r.ending,
+        human: r.human,
+        soldier: r.soldier,
+        courage: r.courage,
+        empathy: r.empathy,
+        fragments: r.fragments,
+        matches: r.matches,
+        created_at: r.created_at,
+      })),
+    });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "서버 오류" },
+      { status: 500 },
+    );
+  }
 }
