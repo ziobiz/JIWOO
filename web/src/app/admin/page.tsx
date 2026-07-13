@@ -17,6 +17,7 @@ import { exportExcel, exportPptx, type AnalysisBundle } from "@/lib/exporters";
 import { modelInsights } from "@/lib/interpret";
 import { ColumnChart, DonutChart, type Series, type Slice } from "./Charts";
 import { QRCard } from "./QRCard";
+import { BrandCard } from "./BrandCard";
 
 interface AdminReport extends AnalysisReport {
   rows?: PlayResult[];
@@ -402,6 +403,13 @@ export default function AdminDashboard() {
           </div>
           <ToolBtn
             onClick={() =>
+              document.getElementById("brand-section")?.scrollIntoView({ behavior: "smooth" })
+            }
+          >
+            브랜드
+          </ToolBtn>
+          <ToolBtn
+            onClick={() =>
               document.getElementById("qr-section")?.scrollIntoView({ behavior: "smooth" })
             }
           >
@@ -454,6 +462,10 @@ export default function AdminDashboard() {
             아직 수집된 플레이 데이터가 없습니다. 게임을 완료하면 결과가 이곳에 집계됩니다.
           </p>
         )}
+
+        <div id="brand-section" className="scroll-mt-20">
+          <BrandCard secret={secret} />
+        </div>
 
         <div id="qr-section" className="scroll-mt-20">
           <QRCard />

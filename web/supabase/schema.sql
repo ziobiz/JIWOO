@@ -40,3 +40,25 @@ create policy "Anyone can insert play results"
 -- (관리자 페이지는 /api/analyze 경유)
 
 comment on table public.play_results is '붉은 무공훈장 플레이 결과 — 학술 분석용';
+
+-- 링크 미리보기(오픈그래프) 브랜딩 — 단일 행(id=1)
+create table if not exists public.site_branding (
+  id int primary key default 1,
+  title text,
+  description text,
+  image_url text,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.site_branding (id) values (1)
+  on conflict (id) do nothing;
+
+alter table public.site_branding enable row level security;
+
+-- 누구나 읽기 가능 (링크 미리보기 메타데이터 생성용)
+create policy "Anyone can read branding"
+  on public.site_branding for select
+  to anon, authenticated
+  using (true);
+
+comment on table public.site_branding is '사이트 링크 미리보기(OG) 브랜딩 설정';

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Serif_KR, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
+import { DEFAULT_BRANDING, absoluteImage, siteUrl } from "@/lib/branding";
 
 const sans = Noto_Sans_KR({
   variable: "--font-sans",
@@ -15,9 +16,31 @@ const serif = Noto_Serif_KR({
 });
 
 export const metadata: Metadata = {
-  title: "붉은 무공훈장 — The Weight of Courage",
-  description:
-    "사전 성향과 게임 선택을 교차 분석하는 웹 비주얼 노벨 연구 플랫폼",
+  metadataBase: new URL(siteUrl()),
+  title: DEFAULT_BRANDING.title,
+  description: DEFAULT_BRANDING.description,
+  openGraph: {
+    type: "website",
+    url: siteUrl(),
+    siteName: "붉은 무공훈장 — The Weight of Courage",
+    title: DEFAULT_BRANDING.title,
+    description: DEFAULT_BRANDING.description,
+    images: [
+      {
+        url: absoluteImage(DEFAULT_BRANDING.imageUrl),
+        width: 1200,
+        height: 630,
+        alt: DEFAULT_BRANDING.title,
+      },
+    ],
+    locale: "ko_KR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: DEFAULT_BRANDING.title,
+    description: DEFAULT_BRANDING.description,
+    images: [absoluteImage(DEFAULT_BRANDING.imageUrl)],
+  },
 };
 
 export default function RootLayout({

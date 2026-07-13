@@ -1,4 +1,34 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import { absoluteImage, resolveBranding, siteUrl } from "@/lib/branding";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const b = await resolveBranding();
+  const base = siteUrl();
+  const img = absoluteImage(b.imageUrl);
+  return {
+    metadataBase: new URL(base),
+    title: b.title,
+    description: b.description,
+    openGraph: {
+      type: "website",
+      url: base,
+      siteName: "붉은 무공훈장 — The Weight of Courage",
+      title: b.title,
+      description: b.description,
+      images: [{ url: img, width: 1200, height: 630, alt: b.title }],
+      locale: "ko_KR",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: b.title,
+      description: b.description,
+      images: [img],
+    },
+  };
+}
 
 export default function Home() {
   return (
