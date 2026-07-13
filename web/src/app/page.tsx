@@ -37,7 +37,16 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="px-6 py-5 text-center">
+      <footer className="px-6 py-6 text-center space-y-2 border-t border-stone-900">
+        <p className="text-xs text-stone-500 leading-relaxed">
+          제공: 근현대 미국 문학 탐구 연구회
+          <span className="mx-2 text-stone-700">ㅣ</span>
+          연구회원: 3학년 1반 박지수 이지우
+          <span className="mx-2 text-stone-700">ㅣ</span>
+          그림: 석경원
+          <span className="mx-2 text-stone-700">ㅣ</span>
+          소속: 동두천외국어고등학교
+        </p>
         <p className="text-xs text-stone-700">
           © The Weight of Courage · 원작 Stephen Crane, 『The Red Badge of Courage』
         </p>
