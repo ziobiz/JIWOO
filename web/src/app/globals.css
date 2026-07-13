@@ -90,3 +90,20 @@ code {
     animation: none;
   }
 }
+
+/* ── 관리자 대시보드 인쇄 / PDF 저장 ── */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .break-inside-avoid {
+    break-inside: avoid;
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+}

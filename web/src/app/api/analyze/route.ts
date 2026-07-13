@@ -87,6 +87,8 @@ export async function GET(request: Request) {
     const report = buildReport(rows, source);
     return NextResponse.json({
       ...report,
+      // 전체 원자료 — 클라이언트에서 학년/성별/전공/MBTI 교차분석 및 내보내기에 사용
+      rows,
       recentPlays: rows.slice(0, 100).map((r) => ({
         name: r.name,
         gender: r.gender,

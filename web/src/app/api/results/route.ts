@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
-import { getSupabasePublic } from "@/lib/supabase";
+import { getSupabasePublic, getSupabaseAdmin } from "@/lib/supabase";
 import type { PlayResult } from "@/types/game";
+
+function checkAdmin(request: Request): boolean {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret) return process.env.NODE_ENV === "development";
+  const header = request.headers.get("x-admin-secret");
+  const url = new URL(request.url);
+  const query = url.searchParams.get("secret");
+  return header === secret || query === secret;
+}
 
 export async function POST(request: Request) {
   try {
@@ -60,5 +69,60 @@ export async function POST(request: Request) {
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+}
+
+/** 관리자 전용 — 수집 데이터 삭제 (테스트 데이터 정리용)
+ *  body: { all: true }  또는  { ids: string[] } */
+export async function DELETE(request: Request) {
+  try {
+    if (!checkAdmin(request)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const admin = getSupabaseAdmin();
+    if (!admin) {
+      return NextResponse.json(
+        { error: "Supabase 관리자 설정이 필요합니다 (SUPABASE_SERVICE_ROLE_KEY)." },
+        { status: 503 },
+      );
+    }
+
+    const body = (await request.json().catch(() => ({}))) as {
+      all?: boolean;
+      ids?: string[];
+    };
+
+    if (body.all) {
+      // 전체 삭제 — 항상 참인 조건으로 모든 행 제거
+      const { error, count } = await admin
+        .from("play_results")
+        .delete({ count: "exact" })
+        .not("id", "is", null);
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true, deleted: count ?? 0 });
+    }
+
+    if (Array.isArray(body.ids) && body.ids.length > 0) {
+      const { error, count } = await admin
+        .from("play_results")
+        .delete({ count: "exact" })
+        .in("id", body.ids);
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true, deleted: count ?? 0 });
+    }
+
+    return NextResponse.json(
+      { error: "삭제할 대상이 없습니다 (all 또는 ids 필요)." },
+      { status: 400 },
+    );
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "삭제 실패" },
+      { status: 500 },
+    );
   }
 }
