@@ -29,3 +29,10 @@ export const LANG_FLAG: Record<Lang, string> = {
   CH: "🇨🇳",
   JP: "🇯🇵",
 };
+// 국기 이모지가 지원되지 않는 환경(Windows 등) 대비 짧은 코드
+export const LANG_CODE: Record<Lang, string> = {
+  KR: "한",
+  EN: "EN",
+  CH: "中",
+  JP: "日",
+};

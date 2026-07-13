@@ -1,7 +1,7 @@
 "use client";
 
 import { GAME, type Lang } from "./gameData";
-import { LANG_FLAG } from "./useLang";
+import { LANG_CODE } from "./useLang";
 
 export function LangSelector({
   lang,
@@ -11,22 +11,26 @@ export function LangSelector({
   setLang: (l: Lang) => void;
 }) {
   return (
-    <div className="flex gap-1.5 rounded-full border border-stone-700 bg-stone-900/80 px-2 py-1.5">
-      {GAME.meta.langs.map((l) => (
-        <button
-          key={l}
-          type="button"
-          onClick={() => setLang(l)}
-          title={GAME.meta.langNative[l]}
-          className={`h-7 w-7 rounded-full text-base leading-none transition-all ${
-            l === lang
-              ? "bg-amber-700/40 ring-1 ring-amber-500 scale-110"
-              : "opacity-60 hover:opacity-100"
-          }`}
-        >
-          {LANG_FLAG[l]}
-        </button>
-      ))}
+    <div className="inline-flex items-center gap-1 rounded-full border border-stone-700 bg-stone-900/80 p-1">
+      {GAME.meta.langs.map((l) => {
+        const active = l === lang;
+        return (
+          <button
+            key={l}
+            type="button"
+            onClick={() => setLang(l)}
+            title={GAME.meta.langNative[l]}
+            aria-pressed={active}
+            className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold leading-none transition-colors ${
+              active
+                ? "bg-amber-600 text-stone-950"
+                : "text-stone-400 hover:text-stone-100 hover:bg-stone-800"
+            }`}
+          >
+            {LANG_CODE[l]}
+          </button>
+        );
+      })}
     </div>
   );
 }
