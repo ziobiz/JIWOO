@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useLang } from "./useLang";
 import { ui, t, statLabel, type Lang } from "./gameData";
 import type { Profile } from "./profile";
@@ -269,19 +270,39 @@ function TitleScreen({
   onContinue: () => void;
 }) {
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col">
-      <div className="flex justify-end px-6 py-4">
+    <div className="relative min-h-screen bg-black text-stone-100 flex flex-col overflow-hidden">
+      {/* '붉은 무공훈장'을 상징하는 움직이는 배경 (바람에 나부끼는 연출) */}
+      <div className="absolute inset-0 overflow-hidden" aria-hidden>
+        <Image
+          src="/assets/title_bg.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="title-bg-wind object-cover"
+        />
+        {/* 흐르는 전장의 연기 */}
+        <div className="absolute inset-0 title-bg-smoke bg-[radial-gradient(ellipse_at_50%_58%,rgba(205,205,215,0.14),transparent_62%)]" />
+        {/* 은은히 맥동하는 핏빛 */}
+        <div className="absolute inset-0 title-bg-blood bg-[radial-gradient(circle_at_28%_46%,rgba(150,22,22,0.55),transparent_52%)]" />
+        {/* 가독성용 어둠 그라디언트 */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/35 to-black/90" />
+      </div>
+
+      <div className="relative z-10 flex justify-end px-6 py-4">
         <LangSelector lang={lang} setLang={setLang} />
       </div>
-      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-8">
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center gap-8">
         <div>
-          <h1 className="font-serif text-4xl sm:text-5xl text-amber-100 tracking-wide">
+          <h1 className="font-serif text-4xl sm:text-5xl text-amber-100 tracking-wide drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
             {ui("title_main", lang)}
           </h1>
-          <p className="mt-4 text-lg text-amber-200/70 font-serif tracking-widest">
+          <p className="mt-4 text-lg text-amber-200/80 font-serif tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
             The Weight of Courage
           </p>
-          <p className="mt-6 text-xs text-stone-600">{ui("menu_credit", lang)}</p>
+          <p className="mt-6 text-xs text-stone-300/80 drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">
+            {ui("menu_credit", lang)}
+          </p>
         </div>
         <div className="flex flex-col gap-3 w-full max-w-xs">
           <button
@@ -304,11 +325,14 @@ function TitleScreen({
             </button>
           )}
         </div>
-        <Link href="/" className="text-xs text-stone-600 hover:text-stone-400">
+        <Link
+          href="/"
+          className="text-xs text-stone-300/80 hover:text-amber-200 drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]"
+        >
           ← 홈으로
         </Link>
       </main>
-      <CreditsFooter />
+      <CreditsFooter className="relative z-10 bg-black/45 backdrop-blur-sm" />
     </div>
   );
 }
