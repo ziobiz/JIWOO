@@ -67,7 +67,7 @@ UI = {
                     "EN": "Based on Stephen Crane's 'The Red Badge of Courage'",
                     "CH": "原著 · 斯蒂芬·克莱恩《The Red Badge of Courage》",
                     "JP": "原作 · スティーヴン・クレイン『The Red Badge of Courage』"},
-    "menu_start":  {"KR": "이야기 시작", "EN": "Begin the Story", "CH": "开始故事", "JP": "物語を始める"},
+    "menu_start":  {"KR": "시작하기", "EN": "Start", "CH": "开始", "JP": "始める"},
     "menu_hint":   {"KR": "TAB 스탯 패널  ·  ↑↓ · Enter 선택  ·  ESC 메뉴",
                     "EN": "TAB Stats  ·  ↑↓ · Enter select  ·  ESC menu",
                     "CH": "TAB 状态面板  ·  ↑↓ · Enter 选择  ·  ESC 菜单",
