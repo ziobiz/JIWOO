@@ -16,6 +16,7 @@ import {
 import { exportExcel, exportPptx, type AnalysisBundle } from "@/lib/exporters";
 import { modelInsights } from "@/lib/interpret";
 import { ColumnChart, DonutChart, type Series, type Slice } from "./Charts";
+import { QRCard } from "./QRCard";
 
 interface AdminReport extends AnalysisReport {
   rows?: PlayResult[];
@@ -399,6 +400,13 @@ export default function AdminDashboard() {
               </button>
             ))}
           </div>
+          <ToolBtn
+            onClick={() =>
+              document.getElementById("qr-section")?.scrollIntoView({ behavior: "smooth" })
+            }
+          >
+            QR 배포
+          </ToolBtn>
           <ToolBtn onClick={() => window.print()}>PDF / 인쇄</ToolBtn>
           <ToolBtn onClick={doExcel} disabled={busy === "excel"}>
             {busy === "excel" ? "생성 중…" : "Excel 내보내기"}
@@ -446,6 +454,10 @@ export default function AdminDashboard() {
             아직 수집된 플레이 데이터가 없습니다. 게임을 완료하면 결과가 이곳에 집계됩니다.
           </p>
         )}
+
+        <div id="qr-section" className="scroll-mt-20">
+          <QRCard />
+        </div>
 
         {d && (
           <>
