@@ -2,12 +2,19 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-interface BrandingResponse {
+interface BrandingFields {
   title: string;
   description: string;
   imageUrl: string;
+  credit: string;
+  copyright: string;
+  notice: string;
+  tagline: string;
+}
+
+interface BrandingResponse extends BrandingFields {
   siteUrl: string;
-  defaults: { title: string; description: string; imageUrl: string };
+  defaults: BrandingFields;
 }
 
 /** 관리자 — 링크 공유 시 노출되는 소개(오픈그래프) 브랜딩 설정 */
@@ -15,9 +22,12 @@ export function BrandCard({ secret }: { secret: string }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [credit, setCredit] = useState("");
+  const [copyright, setCopyright] = useState("");
+  const [notice, setNotice] = useState("");
+  const [tagline, setTagline] = useState("");
   const [siteUrl, setSiteUrl] = useState("");
-  const [defaults, setDefaults] =
-    useState<BrandingResponse["defaults"] | null>(null);
+  const [defaults, setDefaults] = useState<BrandingFields | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "saving" | "saved" | "error">(
     "loading",
   );
@@ -32,6 +42,10 @@ export function BrandCard({ secret }: { secret: string }) {
       setTitle(j.title);
       setDescription(j.description);
       setImageUrl(j.imageUrl);
+      setCredit(j.credit);
+      setCopyright(j.copyright);
+      setNotice(j.notice);
+      setTagline(j.tagline);
       setSiteUrl(j.siteUrl);
       setDefaults(j.defaults);
       setStatus("idle");
@@ -52,7 +66,15 @@ export function BrandCard({ secret }: { secret: string }) {
       const res = await fetch(`/api/branding?secret=${encodeURIComponent(secret)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "x-admin-secret": secret },
-        body: JSON.stringify({ title, description, imageUrl }),
+        body: JSON.stringify({
+          title,
+          description,
+          imageUrl,
+          credit,
+          copyright,
+          notice,
+          tagline,
+        }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j.error || `HTTP ${res.status}`);
@@ -63,13 +85,17 @@ export function BrandCard({ secret }: { secret: string }) {
       setStatus("error");
       setMsg(e instanceof Error ? e.message : "저장 실패");
     }
-  }, [secret, title, description, imageUrl]);
+  }, [secret, title, description, imageUrl, credit, copyright, notice, tagline]);
 
   const resetDefaults = useCallback(() => {
     if (!defaults) return;
     setTitle(defaults.title);
     setDescription(defaults.description);
     setImageUrl(defaults.imageUrl);
+    setCredit(defaults.credit);
+    setCopyright(defaults.copyright);
+    setNotice(defaults.notice);
+    setTagline(defaults.tagline);
   }, [defaults]);
 
   const copyLink = useCallback(async () => {
@@ -128,6 +154,47 @@ export function BrandCard({ secret }: { secret: string }) {
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="/assets/title_bg.png 또는 https://..."
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-amber-500"
+            />
+          </Field>
+
+          <div className="border-t border-slate-200 pt-4">
+            <p className="text-xs font-semibold text-amber-700">화면 문구 (홈·타이틀·푸터 공통)</p>
+          </div>
+
+          <Field label="소개 태그라인 (홈 상단 · 줄바꿈 = Enter)">
+            <textarea
+              value={tagline}
+              onChange={(e) => setTagline(e.target.value)}
+              maxLength={300}
+              rows={2}
+              className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-amber-500"
+            />
+          </Field>
+          <Field label="교육·연구 안내 문구 (홈 안내 박스)">
+            <textarea
+              value={notice}
+              onChange={(e) => setNotice(e.target.value)}
+              maxLength={600}
+              rows={3}
+              className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-amber-500"
+            />
+            <span className="text-[10px] text-slate-400">{notice.length}/600</span>
+          </Field>
+          <Field label="제공/제작진 크레딧 (푸터)">
+            <textarea
+              value={credit}
+              onChange={(e) => setCredit(e.target.value)}
+              maxLength={500}
+              rows={2}
+              className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-amber-500"
+            />
+          </Field>
+          <Field label="저작권 문구 (푸터)">
+            <input
+              value={copyright}
+              onChange={(e) => setCopyright(e.target.value)}
+              maxLength={300}
               className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-amber-500"
             />
           </Field>
@@ -199,6 +266,20 @@ export function BrandCard({ secret }: { secret: string }) {
               <p className="line-clamp-2 text-xs text-slate-500">
                 {description || "설명을 입력하세요"}
               </p>
+            </div>
+          </div>
+
+          <p className="pt-2 text-xs font-semibold text-slate-700">화면 문구 미리보기</p>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center space-y-3">
+            <p className="whitespace-pre-line text-sm text-slate-700">{tagline}</p>
+            <p className="whitespace-pre-line rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-[11px] leading-relaxed text-slate-500">
+              {notice}
+            </p>
+            <div className="border-t border-slate-200 pt-2">
+              <p className="whitespace-pre-line text-[11px] leading-relaxed text-slate-500">
+                {credit}
+              </p>
+              <p className="mt-1 text-[11px] text-slate-400">{copyright}</p>
             </div>
           </div>
         </div>

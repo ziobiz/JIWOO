@@ -47,8 +47,18 @@ create table if not exists public.site_branding (
   title text,
   description text,
   image_url text,
+  credit text,
+  copyright text,
+  notice text,
+  tagline text,
   updated_at timestamptz not null default now()
 );
+
+-- 기존 테이블에 컬럼 추가 (이미 있으면 무시)
+alter table public.site_branding add column if not exists credit text;
+alter table public.site_branding add column if not exists copyright text;
+alter table public.site_branding add column if not exists notice text;
+alter table public.site_branding add column if not exists tagline text;
 
 insert into public.site_branding (id) values (1)
   on conflict (id) do nothing;

@@ -15,6 +15,7 @@ import {
 } from "@/lib/breakdown";
 import { exportExcel, exportPptx, type AnalysisBundle } from "@/lib/exporters";
 import { modelInsights } from "@/lib/interpret";
+import { useBranding } from "@/lib/useBranding";
 import { ColumnChart, DonutChart, type Series, type Slice } from "./Charts";
 import { QRCard } from "./QRCard";
 import { BrandCard } from "./BrandCard";
@@ -758,23 +759,22 @@ function Analysis({ result, meaning }: { result: string; meaning: string }) {
 }
 
 function CreditsFooter({ className = "", light }: { className?: string; light?: boolean }) {
+  const b = useBranding();
   return (
     <footer
       className={`px-6 py-6 text-center space-y-2 border-t ${
         light ? "border-slate-200" : "border-stone-900"
       } ${className}`}
     >
-      <p className={`text-[11px] leading-relaxed ${light ? "text-slate-500" : "text-stone-500"}`}>
-        제공: 근현대 미국 문학 탐구 연구회
-        <span className="mx-1.5 text-slate-400">ㅣ</span>
-        연구회원: 3학년 1반 박지수 이지우
-        <span className="mx-1.5 text-slate-400">ㅣ</span>
-        그림: 석경원
-        <span className="mx-1.5 text-slate-400">ㅣ</span>
-        소속: 동두천외국어고등학교
+      <p
+        className={`text-[11px] leading-relaxed whitespace-pre-line ${
+          light ? "text-slate-500" : "text-stone-500"
+        }`}
+      >
+        {b.credit}
       </p>
       <p className={`text-xs ${light ? "text-slate-400" : "text-stone-700"}`}>
-        © The Weight of Courage · 원작 Stephen Crane, 『The Red Badge of Courage』
+        {b.copyright}
       </p>
     </footer>
   );

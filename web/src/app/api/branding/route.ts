@@ -35,6 +35,10 @@ export async function PUT(request: Request) {
       title: string;
       description: string;
       imageUrl: string;
+      credit: string;
+      copyright: string;
+      notice: string;
+      tagline: string;
     }>;
 
     const row = {
@@ -42,6 +46,10 @@ export async function PUT(request: Request) {
       title: (body.title ?? "").slice(0, 120),
       description: (body.description ?? "").slice(0, 400),
       image_url: (body.imageUrl ?? "").slice(0, 500),
+      credit: (body.credit ?? "").slice(0, 500),
+      copyright: (body.copyright ?? "").slice(0, 300),
+      notice: (body.notice ?? "").slice(0, 600),
+      tagline: (body.tagline ?? "").slice(0, 300),
       updated_at: new Date().toISOString(),
     };
 

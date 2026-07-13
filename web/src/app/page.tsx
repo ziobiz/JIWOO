@@ -30,7 +30,8 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function Home() {
+export default async function Home() {
+  const b = await resolveBranding();
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col">
       <main className="flex-1 max-w-2xl w-full mx-auto px-6 py-24 flex flex-col items-center text-center gap-12">
@@ -44,10 +45,8 @@ export default function Home() {
           <p className="text-lg text-stone-400 font-serif italic">
             The Weight of Courage
           </p>
-          <p className="text-sm text-stone-500 max-w-md mx-auto leading-relaxed pt-4">
-            1863년, 전쟁터에 선 한 청년의 이야기.
-            <br />
-            당신의 선택이 헨리의 용기와 두려움을 결정합니다.
+          <p className="text-sm text-stone-500 max-w-md mx-auto leading-relaxed pt-4 whitespace-pre-line">
+            {b.tagline}
           </p>
         </div>
 
@@ -59,27 +58,17 @@ export default function Home() {
         </Link>
 
         <div className="w-full rounded-xl border border-stone-800 bg-stone-900/60 p-5 text-left">
-          <p className="text-xs text-stone-500 leading-relaxed">
-            이 게임은 교육·연구 목적의 성향 분석을 포함합니다. 시작 화면에서
-            간단한 캐릭터 설정과 설문에 참여하게 되며, 수집된 응답은 익명으로
-            통계 분석에만 사용됩니다.
+          <p className="text-xs text-stone-500 leading-relaxed whitespace-pre-line">
+            {b.notice}
           </p>
         </div>
       </main>
 
       <footer className="px-6 py-6 text-center space-y-2 border-t border-stone-900">
-        <p className="text-xs text-stone-500 leading-relaxed">
-          제공: 근현대 미국 문학 탐구 연구회
-          <span className="mx-2 text-stone-700">ㅣ</span>
-          연구회원: 3학년 1반 박지수 이지우
-          <span className="mx-2 text-stone-700">ㅣ</span>
-          그림: 석경원
-          <span className="mx-2 text-stone-700">ㅣ</span>
-          소속: 동두천외국어고등학교
+        <p className="text-xs text-stone-500 leading-relaxed whitespace-pre-line">
+          {b.credit}
         </p>
-        <p className="text-xs text-stone-700">
-          © The Weight of Courage · 원작 Stephen Crane, 『The Red Badge of Courage』
-        </p>
+        <p className="text-xs text-stone-700">{b.copyright}</p>
       </footer>
     </div>
   );
