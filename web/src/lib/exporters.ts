@@ -3,6 +3,7 @@ import type { AnalysisReport, PlayResult } from "@/types/game";
 import type { GroupStat } from "./breakdown";
 import { label } from "./breakdown";
 import { BASELINE, REFERENCE } from "./references";
+import { modelInsights, type ModelInsight } from "./interpret";
 
 export interface AnalysisBundle {
   report: AnalysisReport;
@@ -184,6 +185,7 @@ export async function exportPptx(b: AnalysisBundle) {
   }
 
   // 3~5) 세 가지 모델 비교
+  const ins = modelInsights(d, b.report.sampleSize);
   const modelSlide = (
     title: string,
     hypothesis: string,
@@ -191,6 +193,7 @@ export async function exportPptx(b: AnalysisBundle) {
     labels: string[],
     baseVals: number[],
     ourVals: number[],
+    insight: ModelInsight,
   ) => {
     const s = pptx.addSlide({ masterName: "MAIN" });
     heading(s, title);
@@ -200,16 +203,20 @@ export async function exportPptx(b: AnalysisBundle) {
         { name: "기존 통계(기준선)", labels, values: baseVals },
         { name: "우리 데이터", labels, values: ourVals },
       ],
-      { x: 0.7, y: 1.3, w: 7.6, h: 4, showValue: true, chartColors: [GRAY, GREEN], barDir: "col" },
+      { x: 0.7, y: 1.3, w: 6.6, h: 4, showValue: true, chartColors: [GRAY, GREEN], barDir: "col" },
     );
     s.addText(
       [
-        { text: "가설\n", options: { bold: true, color: AMBER, fontSize: 13 } },
-        { text: hypothesis + "\n\n", options: { color: NAVY, fontSize: 12 } },
-        { text: "출처\n", options: { bold: true, color: AMBER, fontSize: 13 } },
-        { text: source, options: { color: SLATE, fontSize: 11, italic: true } },
+        { text: "가설\n", options: { bold: true, color: AMBER, fontSize: 12 } },
+        { text: hypothesis + "\n\n", options: { color: NAVY, fontSize: 10 } },
+        { text: "분석 결과\n", options: { bold: true, color: "0369A1", fontSize: 12 } },
+        { text: insight.result + "\n\n", options: { color: NAVY, fontSize: 10 } },
+        { text: "이 부분이 뜻하는 내용\n", options: { bold: true, color: SLATE, fontSize: 12 } },
+        { text: insight.meaning + "\n\n", options: { color: NAVY, fontSize: 10 } },
+        { text: "출처\n", options: { bold: true, color: AMBER, fontSize: 11 } },
+        { text: source, options: { color: SLATE, fontSize: 9, italic: true } },
       ],
-      { x: 8.5, y: 1.3, w: 4.1, h: 4.5, valign: "top" },
+      { x: 7.5, y: 1.3, w: 5.3, h: 5.4, valign: "top" },
     );
     foot(s);
   };
@@ -220,6 +227,7 @@ export async function exportPptx(b: AnalysisBundle) {
     ["원칙(A)", "공감(B)"],
     [BASELINE.model1Principle, 100 - BASELINE.model1Principle],
     [d.model1.principlePct, d.model1.empathyPct],
+    ins.m1,
   );
   modelSlide(
     "② MBTI 사고형 vs 감정형 — 엔딩·용기",
@@ -228,6 +236,7 @@ export async function exportPptx(b: AnalysisBundle) {
     ["T형 진엔딩", "F형 진엔딩"],
     [BASELINE.model2MaleT, BASELINE.model2FemaleF],
     [d.model2.tGoodEndingPct, d.model2.fGoodEndingPct],
+    ins.m2,
   );
   modelSlide(
     "③ 트롤리 · 행동경제학 — 이기심 vs 이타심",
@@ -236,6 +245,7 @@ export async function exportPptx(b: AnalysisBundle) {
     ["이타심(B)"],
     [BASELINE.model3Dictator],
     [d.model3.altruismPct],
+    ins.m3,
   );
 
   // 6) 그룹별 교차분석 (그래프 + 표)

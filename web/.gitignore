@@ -37,3 +37,5 @@ next-env.d.ts
 
 # large generated assets (copy via scripts/copy-assets.ps1)
 /public/assets/
+
+.vercel

@@ -14,6 +14,7 @@ import {
   type GroupStat,
 } from "@/lib/breakdown";
 import { exportExcel, exportPptx, type AnalysisBundle } from "@/lib/exporters";
+import { modelInsights } from "@/lib/interpret";
 import { ColumnChart, DonutChart, type Series, type Slice } from "./Charts";
 
 interface AdminReport extends AnalysisReport {
@@ -225,6 +226,10 @@ export default function AdminDashboard() {
   const major = useMemo(() => byMajor(rows), [rows]);
   const mbtiTF = useMemo(() => byMbtiTF(rows), [rows]);
   const mbtiType = useMemo(() => byMbtiType(rows), [rows]);
+  const insights = useMemo(
+    () => (report?.data ? modelInsights(report.data, report.sampleSize) : null),
+    [report],
+  );
 
   async function load() {
     setLoading(true);
@@ -511,6 +516,7 @@ export default function AdminDashboard() {
               )}
               <p className="text-xs text-slate-500">평균 저울 — 인간 {d.model1.avgHuman} · 군인 {d.model1.avgSoldier}</p>
               <Hypothesis text={REFERENCE.model1.hypothesis} />
+              {insights && <Analysis result={insights.m1.result} meaning={insights.m1.meaning} />}
               <Source>{REFERENCE.model1.baselines[0].source}</Source>
             </Card>
 
@@ -533,6 +539,7 @@ export default function AdminDashboard() {
               )}
               <p className="text-xs text-slate-500">T형 평균 용기 {d.model2.tAvgCourage} · F형 평균 용기 {d.model2.fAvgCourage}</p>
               <Hypothesis text={REFERENCE.model2.hypothesis} />
+              {insights && <Analysis result={insights.m2.result} meaning={insights.m2.meaning} />}
               <Source>{REFERENCE.model2.baselines[0].source}</Source>
             </Card>
 
@@ -561,6 +568,7 @@ export default function AdminDashboard() {
               )}
               <p className="text-xs text-slate-500">평균 인간본능 {d.model3.avgInstinct} · 공감 {d.model3.avgEmpathy} · 기억조각 {d.model3.avgFragments}</p>
               <Hypothesis text={REFERENCE.model3.hypothesis} />
+              {insights && <Analysis result={insights.m3.result} meaning={insights.m3.meaning} />}
               <Source>{REFERENCE.model3.baselines[2].source}</Source>
             </Card>
 
@@ -702,6 +710,26 @@ function Hypothesis({ text }: { text: string }) {
         {text}
       </p>
     </div>
+  );
+}
+
+/** 가설 아래 — 누적 데이터 기반 분석 결과 + 해석 */
+function Analysis({ result, meaning }: { result: string; meaning: string }) {
+  return (
+    <>
+      <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3">
+        <p className="text-xs leading-relaxed text-sky-900">
+          <span className="font-semibold">분석 결과 · </span>
+          {result}
+        </p>
+      </div>
+      <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+        <p className="text-xs leading-relaxed text-slate-700">
+          <span className="font-semibold text-slate-900">이 부분이 뜻하는 내용 · </span>
+          {meaning}
+        </p>
+      </div>
+    </>
   );
 }
 

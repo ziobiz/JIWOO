@@ -1,0 +1,5 @@
+feat(admin): add data-driven analysis result + interpretation under each model hypothesis
+
+For the three model cards (Kohlberg/Gilligan, MBTI T/F, Trolley/behavioral econ),
+render analysis result (data summary vs baseline) and interpretation below the
+hypothesis, with a small-sample caveat. Also added these sections to PPTX slides.
