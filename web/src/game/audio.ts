@@ -30,10 +30,14 @@ const BGM_BASE: Record<string, number> = {
 };
 
 const SFX_BASE: Record<string, number> = {
-  gun: 0.85,
-  volley: 0.9,
-  cannon: 0.8,
-  bomb: 0.75,
+  // 전장 사운드 — 크고 명확하게(최종 볼륨 1.0에 도달하도록 높은 기준값, 재생 시 클램프)
+  gun: 2.4,
+  volley: 2.6,
+  cannon: 2.6,
+  bomb: 2.2,
+  drum: 2.5, // 북소리 — 굉음 속 통신 수단, 뚜렷하게
+  bugle: 2.5, // 나팔 — 굉음 속 통신 수단, 뚜렷하게
+  impact: 1.6,
   scream: 0.7,
   shout: 0.65,
   cough: 0.6,
@@ -42,17 +46,14 @@ const SFX_BASE: Record<string, number> = {
   shifting: 0.5,
   rustle: 0.45,
   splash: 0.55,
-  bugle: 0.6,
-  drum: 0.55,
   foot: 0.4,
-  impact: 0.7,
   heartbeat: 0.5,
   click: 0.4,
   item: 0.55,
 };
 
 const AMB_BASE: Record<string, number> = {
-  warfield: 0.62,
+  warfield: 1.6, // 아비규환 전장 — 엄청난 굉음
   campfire: 0.5,
   wagon: 0.45,
   river: 0.4,
@@ -130,7 +131,7 @@ export class AudioManager {
     this.ambEl?.pause();
     const el = new Audio(src(file));
     el.loop = true;
-    el.volume = (AMB_BASE[key] ?? 0.5) * SFX_MASTER * this.sfxVol;
+    el.volume = Math.min(1, (AMB_BASE[key] ?? 0.5) * SFX_MASTER * this.sfxVol);
     el.play().catch(() => {});
     this.ambEl = el;
   }
@@ -153,7 +154,7 @@ export class AudioManager {
 
   playSfx(key: string) {
     if (!this.unlocked) return;
-    const vol = (SFX_BASE[key] ?? 0.55) * SFX_MASTER * this.sfxVol;
+    const vol = Math.min(1, (SFX_BASE[key] ?? 0.55) * SFX_MASTER * this.sfxVol);
     const el = new Audio(src(key));
     el.volume = vol;
     el.play().catch(() => {});
@@ -170,8 +171,10 @@ export class AudioManager {
   setSfxVol(v: number) {
     this.sfxVol = v;
     if (this.ambEl && this.currentAmb) {
-      this.ambEl.volume =
-        (AMB_BASE[this.currentAmb] ?? 0.5) * SFX_MASTER * v;
+      this.ambEl.volume = Math.min(
+        1,
+        (AMB_BASE[this.currentAmb] ?? 0.5) * SFX_MASTER * v,
+      );
     }
   }
 

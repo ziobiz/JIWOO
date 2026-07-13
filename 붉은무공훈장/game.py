@@ -456,14 +456,15 @@ def save_settings():
 
 # 효과음은 "조금 작게" — 소리별 상대 음량 × 마스터
 SFX_MASTER = 0.55
+# 전장 사운드(포성·총성·북·나팔)는 크고 명확하게 — 높은 기준값(재생 시 [0,1] 클램프)
 SFX_VOL = {
-    "page": 0.45, "wind": 0.5, "bugle": 0.7, "shifting": 0.6, "heartbeat": 0.6,
-    "gun": 0.9, "volley": 1.0, "bomb": 0.72, "foot": 0.55, "item": 0.6, "click": 0.32,
-    "scream": 1.0, "shout": 0.55, "rustle": 0.42, "drum": 0.5, "impact": 0.62,
-    "cough": 0.55, "cannon": 0.82, "splash": 0.6,
+    "page": 0.45, "wind": 0.5, "bugle": 2.5, "shifting": 0.6, "heartbeat": 0.6,
+    "gun": 2.4, "volley": 2.6, "bomb": 2.2, "foot": 0.55, "item": 0.6, "click": 0.32,
+    "scream": 1.0, "shout": 0.55, "rustle": 0.42, "drum": 2.5, "impact": 1.6,
+    "cough": 0.55, "cannon": 2.6, "splash": 0.6,
 }
-# 앰비언스(장소 분위기) 상대 음량 — 배경음악 위에 은은히 깔림
-AMB_VOL = {"warfield": 0.62, "campfire": 0.5, "wagon": 0.5, "river": 0.55}
+# 앰비언스(장소 분위기) 상대 음량 — 전장은 아비규환처럼 크게
+AMB_VOL = {"warfield": 1.6, "campfire": 0.5, "wagon": 0.5, "river": 0.55}
 # 배경음악 감정별 음량 (전투는 조금 크게, 애도는 은은하게)
 MUSIC_VOL = {
     "prologue": 0.38, "bgm": 0.4, "campfirebgm": 0.42, "tension": 0.4,
