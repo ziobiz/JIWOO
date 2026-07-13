@@ -7,6 +7,8 @@ import { NAME_MAX } from "./useLang";
 import { defaultProfile, type Profile } from "./profile";
 import { LangSelector } from "./LangSelector";
 import { CreditsFooter } from "./CreditsFooter";
+import { getAudio } from "./audio";
+import { loadSettings } from "./save";
 
 const C = GAME.constants;
 
@@ -59,7 +61,22 @@ export function CharacterCreator({
 
   const upd = (patch: Partial<Profile>) => setProfile((p) => ({ ...p, ...patch }));
 
+  const audio = getAudio();
+  // 선택/다음 클릭음 (게임 내 선택음과 동일). 첫 상호작용에서 자동재생 잠금 해제.
+  const click = () => {
+    audio.unlock();
+    audio.playSfx("click");
+  };
+  // 프롤로그 BGM 시작 — 3번째 답변 시 음악이 흐르기 시작해 게임까지 이어짐
+  const startBgm = () => {
+    const s = loadSettings();
+    audio.setBgmVol(s.bgm);
+    audio.unlock();
+    audio.playBgm("prologue");
+  };
+
   function randomize() {
+    click();
     const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
     upd({
       portrait: 1 + Math.floor(Math.random() * C.portraitCount),
@@ -71,6 +88,7 @@ export function CharacterCreator({
   }
 
   function toSurvey() {
+    click();
     if (!profile.name.trim()) {
       setError(ui("cc_need_name", lang));
       return;
@@ -85,16 +103,21 @@ export function CharacterCreator({
 
   function pickAnswer(v: "A" | "B") {
     // 선택 즉시 색으로 반영. 자동 이동하지 않고 사용자가 '다음'으로 진행.
+    click();
     upd({ survey: { ...profile.survey, [qk]: v } });
+    // 3번째(마지막) 질문에 답하면 프롤로그 BGM이 흐르기 시작
+    if (qk === "q3") startBgm();
   }
 
   function surveyNext() {
     if (!answer) return;
+    click();
     if (surveyIdx < 2) setSurveyIdx((i) => i + 1);
     else onDone(profile);
   }
 
   function surveyPrev() {
+    click();
     if (surveyIdx > 0) setSurveyIdx((i) => i - 1);
     else setPhase("info");
   }
@@ -123,7 +146,10 @@ export function CharacterCreator({
                   <button
                     key={n}
                     type="button"
-                    onClick={() => upd({ portrait: n })}
+                    onClick={() => {
+                      click();
+                      upd({ portrait: n });
+                    }}
                     className={`relative aspect-[3/4] overflow-hidden rounded-lg border-2 transition-all ${
                       profile.portrait === n
                         ? "border-amber-500 ring-2 ring-amber-600/50"
@@ -162,21 +188,21 @@ export function CharacterCreator({
               <div>
                 <label className="text-sm text-amber-200">{ui("cc_gender", lang)}</label>
                 <div className="mt-1">
-                  <OptionRow keys={C.genderKeys} value={profile.gender} onPick={(k) => upd({ gender: k })} lang={lang} cols={3} />
+                  <OptionRow keys={C.genderKeys} value={profile.gender} onPick={(k) => { click(); upd({ gender: k }); }} lang={lang} cols={3} />
                 </div>
               </div>
 
               <div>
                 <label className="text-sm text-amber-200">{ui("cc_grade", lang)}</label>
                 <div className="mt-1">
-                  <OptionRow keys={C.gradeKeys} value={profile.grade} onPick={(k) => upd({ grade: k })} lang={lang} cols={3} />
+                  <OptionRow keys={C.gradeKeys} value={profile.grade} onPick={(k) => { click(); upd({ grade: k }); }} lang={lang} cols={3} />
                 </div>
               </div>
 
               <div>
                 <label className="text-sm text-amber-200">{ui("cc_major", lang)}</label>
                 <div className="mt-1">
-                  <OptionRow keys={C.majorKeys} value={profile.major} onPick={(k) => upd({ major: k })} lang={lang} cols={4} />
+                  <OptionRow keys={C.majorKeys} value={profile.major} onPick={(k) => { click(); upd({ major: k }); }} lang={lang} cols={4} />
                 </div>
               </div>
 
@@ -184,7 +210,10 @@ export function CharacterCreator({
                 <label className="text-sm text-amber-200">{ui("cc_mbti", lang)}</label>
                 <select
                   value={profile.mbti}
-                  onChange={(e) => upd({ mbti: e.target.value })}
+                  onChange={(e) => {
+                    click();
+                    upd({ mbti: e.target.value });
+                  }}
                   className="mt-1 w-full rounded-lg border border-stone-700 bg-stone-900 px-3 py-2 text-sm outline-none focus:border-amber-600"
                 >
                   {C.mbtiTypes.map((m) => (
