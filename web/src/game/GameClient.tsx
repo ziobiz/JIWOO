@@ -10,6 +10,7 @@ import type { EngineSnapshot } from "./engine";
 import { CharacterCreator } from "./CharacterCreator";
 import { PlayView } from "./PlayView";
 import { LangSelector } from "./LangSelector";
+import { CreditsFooter } from "./CreditsFooter";
 import { readSaveMeta, hasSave, deleteSave, loadSnapshot } from "./save";
 
 type Phase =
@@ -307,17 +308,7 @@ function TitleScreen({
           ← 홈으로
         </Link>
       </main>
-      <footer className="px-6 py-5 text-center border-t border-stone-900">
-        <p className="text-[11px] text-stone-500 leading-relaxed">
-          제공: 근현대 미국 문학 탐구 연구회
-          <span className="mx-1.5 text-stone-700">ㅣ</span>
-          연구회원: 3학년 1반 박지수 이지우
-          <span className="mx-1.5 text-stone-700">ㅣ</span>
-          그림: 석경원
-          <span className="mx-1.5 text-stone-700">ㅣ</span>
-          소속: 동두천외국어고등학교
-        </p>
-      </footer>
+      <CreditsFooter />
     </div>
   );
 }
@@ -459,11 +450,11 @@ function ResultScreen({
     ["용기", state.stats["용기"] ?? 0],
   ];
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-100">
+    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col">
       <div className="flex justify-end px-6 py-4">
         <LangSelector lang={lang} setLang={setLang} />
       </div>
-      <div className="max-w-xl mx-auto px-6 pb-16 text-center">
+      <div className="flex-1 max-w-xl w-full mx-auto px-6 pb-16 text-center">
         <p className="text-xs tracking-widest text-amber-600">ENDING</p>
         <h1 className="mt-2 font-serif text-3xl text-amber-100">
           {ui(`end_${ending}`, lang)}
@@ -534,6 +525,7 @@ function ResultScreen({
           </Link>
         </div>
       </div>
+      <CreditsFooter />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { GAME, ui, portraitSrc, type Lang } from "./gameData";
 import { NAME_MAX } from "./useLang";
 import { defaultProfile, type Profile } from "./profile";
 import { LangSelector } from "./LangSelector";
+import { CreditsFooter } from "./CreditsFooter";
 
 const C = GAME.constants;
 
@@ -99,7 +100,7 @@ export function CharacterCreator({
   }
 
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-100">
+    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col">
       <div className="flex justify-end px-6 py-4">
         <LangSelector lang={lang} setLang={setLang} />
       </div>
@@ -278,6 +279,8 @@ export function CharacterCreator({
           </div>
         </div>
       )}
+
+      <CreditsFooter className="mt-auto" />
     </div>
   );
 }
