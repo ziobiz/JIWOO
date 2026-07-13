@@ -5,6 +5,23 @@ import Link from "next/link";
 import { BASELINE, REFERENCE } from "@/lib/references";
 import type { AnalysisReport } from "@/types/game";
 
+interface AdminReport extends AnalysisReport {
+  recentPlays?: Array<{
+    name: string;
+    gender: string;
+    grade: string;
+    mbti: string;
+    ending: string;
+    human: number;
+    soldier: number;
+    courage: number;
+    empathy: number;
+    fragments: number;
+    matches: number;
+    created_at?: string;
+  }>;
+}
+
 function Bar({
   label,
   value,
@@ -43,7 +60,7 @@ function Source({ children }: { children: React.ReactNode }) {
 
 export default function AdminDashboard() {
   const [secret, setSecret] = useState("");
-  const [report, setReport] = useState<AnalysisReport | null>(null);
+  const [report, setReport] = useState<AdminReport | null>(null);
   const [authed, setAuthed] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -176,7 +193,35 @@ export default function AdminDashboard() {
               />
             </section>
 
+            {/* 엔딩 분포 */}
+            {d.endingDistribution.length > 0 && (
+              <ModelCard title="엔딩 분포">
+                <div className="space-y-2">
+                  {d.endingDistribution.map((e) => (
+                    <Bar
+                      key={e.code}
+                      label={`${e.code} (${e.count}건)`}
+                      value={e.pct}
+                      color={
+                        ["TRUE", "GOOD", "HIDDEN"].includes(e.code)
+                          ? "bg-emerald-700"
+                          : e.code === "BAD"
+                            ? "bg-red-800"
+                            : "bg-amber-700"
+                      }
+                    />
+                  ))}
+                </div>
+              </ModelCard>
+            )}
+
             <ModelCard title="① 콜버그 · 길리건 — 원칙 vs 공감">
+              <Insight
+                baseline={BASELINE.model1Principle}
+                ours={d.model1.principlePct}
+                label="원칙(A) 비율"
+                higherIsBaseline
+              />
               <Bar
                 label={`기존 통계 · 규칙 우선 ≈ ${BASELINE.model1Principle}%`}
                 value={BASELINE.model1Principle}
@@ -192,6 +237,10 @@ export default function AdminDashboard() {
                 value={d.model1.empathyPct}
                 color="bg-emerald-700"
               />
+              <p className="text-xs text-stone-400">
+                평균 저울 — 인간 {d.model1.avgHuman} · 군인 {d.model1.avgSoldier}
+              </p>
+              <Hypothesis text={REFERENCE.model1.hypothesis} />
               <Source>
                 {REFERENCE.model1.baselines[0].source}
               </Source>
@@ -217,10 +266,17 @@ export default function AdminDashboard() {
                 T형 평균 용기 {d.model2.tAvgCourage} · F형 평균 용기{" "}
                 {d.model2.fAvgCourage}
               </p>
+              <Hypothesis text={REFERENCE.model2.hypothesis} />
               <Source>{REFERENCE.model2.baselines[0].source}</Source>
             </ModelCard>
 
             <ModelCard title="③ 트롤리 · 행동경제학 — 이기심 vs 이타심">
+              <Insight
+                baseline={BASELINE.model3Dictator}
+                ours={d.model3.altruismPct}
+                label="이타심(B) 비율"
+                higherIsBaseline={false}
+              />
               <Bar
                 label={`기존 · 독재자 게임 양보 ${BASELINE.model3Dictator}%`}
                 value={BASELINE.model3Dictator}
@@ -236,8 +292,64 @@ export default function AdminDashboard() {
                 value={d.model3.altruismPct}
                 color="bg-emerald-700"
               />
+              <p className="text-xs text-stone-400">
+                평균 인간본능 {d.model3.avgInstinct} · 공감 {d.model3.avgEmpathy} ·
+                기억조각 {d.model3.avgFragments}
+              </p>
+              <Hypothesis text={REFERENCE.model3.hypothesis} />
               <Source>{REFERENCE.model3.baselines[2].source}</Source>
             </ModelCard>
+
+            {/* 최근 플레이 기록 */}
+            {report.recentPlays && report.recentPlays.length > 0 && (
+              <section className="rounded-lg border border-stone-800 bg-stone-900 p-5 overflow-x-auto">
+                <h2 className="font-serif text-lg text-amber-100 mb-4">
+                  최근 플레이 기록 (최대 100건)
+                </h2>
+                <table className="w-full text-xs text-left">
+                  <thead>
+                    <tr className="text-stone-500 border-b border-stone-800">
+                      <th className="py-2 pr-3">이름</th>
+                      <th className="py-2 pr-3">MBTI</th>
+                      <th className="py-2 pr-3">엔딩</th>
+                      <th className="py-2 pr-3">인간/군인</th>
+                      <th className="py-2 pr-3">용기</th>
+                      <th className="py-2 pr-3">공감</th>
+                      <th className="py-2 pr-3">조각</th>
+                      <th className="py-2">일치</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.recentPlays.map((r, i) => (
+                      <tr key={i} className="border-b border-stone-800/50 text-stone-300">
+                        <td className="py-2 pr-3">{r.name}</td>
+                        <td className="py-2 pr-3">{r.mbti}</td>
+                        <td className="py-2 pr-3">
+                          <span
+                            className={
+                              ["TRUE", "GOOD", "HIDDEN"].includes(r.ending)
+                                ? "text-emerald-400"
+                                : r.ending === "BAD"
+                                  ? "text-red-400"
+                                  : ""
+                            }
+                          >
+                            {r.ending}
+                          </span>
+                        </td>
+                        <td className="py-2 pr-3">
+                          {r.human}/{r.soldier}
+                        </td>
+                        <td className="py-2 pr-3">{r.courage}</td>
+                        <td className="py-2 pr-3">{r.empathy}</td>
+                        <td className="py-2 pr-3">{r.fragments}</td>
+                        <td className="py-2">{r.matches}/3</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            )}
 
             <section className="rounded-lg border border-stone-800 bg-stone-900 p-5">
               <h2 className="font-serif text-amber-100 mb-4">참고문헌</h2>
@@ -279,5 +391,42 @@ function ModelCard({
       <h2 className="font-serif text-lg text-amber-100">{title}</h2>
       {children}
     </section>
+  );
+}
+
+function Hypothesis({ text }: { text: string }) {
+  return (
+    <div className="rounded-lg bg-amber-900/15 border border-amber-800/30 px-4 py-3 mt-2">
+      <p className="text-xs text-amber-200/80 leading-relaxed">
+        <span className="text-amber-500 font-medium">가설 · </span>
+        {text}
+      </p>
+    </div>
+  );
+}
+
+function Insight({
+  baseline,
+  ours,
+  label,
+  higherIsBaseline,
+}: {
+  baseline: number;
+  ours: number;
+  label: string;
+  higherIsBaseline: boolean;
+}) {
+  const delta = Math.round((ours - baseline) * 10) / 10;
+  const reversed = higherIsBaseline ? delta < 0 : delta > 0;
+  const interesting = Math.abs(delta) >= 5;
+  if (!interesting) return null;
+  return (
+    <p className="text-xs text-emerald-300 bg-emerald-900/20 border border-emerald-800/30 rounded px-3 py-2">
+      {label}: 기준선 {baseline}% 대비 우리 {ours}% (차이 {delta > 0 ? "+" : ""}
+      {delta}%)
+      {reversed
+        ? " — 기존 통계와 반대 경향이 관찰됩니다."
+        : " — 기존 통계와 유사한 경향입니다."}
+    </p>
   );
 }

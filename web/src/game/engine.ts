@@ -7,6 +7,7 @@ import {
   evalCond,
   resolveSpeakerPortrait,
 } from "./gameData";
+import type { Profile } from "./profile";
 
 export interface GameState {
   stats: Record<string, number>;
@@ -34,6 +35,12 @@ export type Frame =
       places: { name: string; index: number; visited: boolean }[];
     };
 
+export interface BacklogEntry {
+  speaker: string | null;
+  text: string;
+  mode: string;
+}
+
 interface ExploreState {
   places: ExplorePlace[];
   visited: boolean[];
@@ -45,6 +52,24 @@ interface StackFrame {
   exploreIndex?: number;
 }
 
+export interface EngineSnapshot {
+  version: 1;
+  state: GameState;
+  stack: StackFrame[];
+  pendingChoice: ChoiceOption[] | null;
+  currentExplore: ExploreState | null;
+  inEnding: boolean;
+  endingCode: string | null;
+  done: boolean;
+  frame: Frame | null;
+  currentBgm: string | null;
+  currentAmb: string | null;
+  label: string;
+  profile: Profile;
+  backlog: BacklogEntry[];
+  savedAt: number;
+}
+
 function clamp(n: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, n));
 }
@@ -54,18 +79,39 @@ export class Engine {
   frame: Frame | null = null;
   done = false;
   endingCode: string | null = null;
+  backlog: BacklogEntry[] = [];
+  label = "";
+  currentBgm: string | null = null;
+  currentAmb: string | null = null;
 
   private stack: StackFrame[] = [];
   private pendingChoice: ChoiceOption[] | null = null;
   private currentExplore: ExploreState | null = null;
   private inEnding = false;
+  private checkpoint: EngineSnapshot | null = null;
 
-  // 외부 훅 (오디오)
   onBgm?: (key: string) => void;
   onAmb?: (key: string) => void;
   onSfx?: (key: string) => void;
+  onBgChange?: (key: string | null) => void;
 
-  constructor() {
+  constructor(snapshot?: EngineSnapshot) {
+    if (snapshot) {
+      this.state = snapshot.state;
+      this.stack = snapshot.stack;
+      this.pendingChoice = snapshot.pendingChoice;
+      this.currentExplore = snapshot.currentExplore;
+      this.inEnding = snapshot.inEnding;
+      this.endingCode = snapshot.endingCode;
+      this.done = snapshot.done;
+      this.frame = snapshot.frame;
+      this.currentBgm = snapshot.currentBgm;
+      this.currentAmb = snapshot.currentAmb;
+      this.label = snapshot.label;
+      this.backlog = snapshot.backlog ?? [];
+      this.checkpoint = snapshot;
+      return;
+    }
     this.state = {
       stats: { ...GAME.constants.initialStats },
       conflict: { 인간: 0, 군인: 0 },
@@ -74,6 +120,7 @@ export class Engine {
       charKey: null,
     };
     this.stack = [{ nodes: GAME.story, i: 0 }];
+    this.captureCheckpoint();
     this.step();
   }
 
@@ -84,6 +131,16 @@ export class Engine {
       } else {
         this.state.stats[key] = clamp((this.state.stats[key] ?? 0) + v, 0, 100);
       }
+    }
+  }
+
+  private logBacklog(frame: Frame) {
+    if (frame.type === "text") {
+      this.backlog.push({
+        speaker: frame.speaker,
+        text: frame.text,
+        mode: frame.mode,
+      });
     }
   }
 
@@ -100,8 +157,6 @@ export class Engine {
   }
 
   private step() {
-    // 일시정지 프레임을 만들거나 종료할 때까지 노드를 처리
-    // 무한 루프 방지용 상한
     for (let guard = 0; guard < 100000; guard++) {
       const top = this.stack[this.stack.length - 1];
       if (!top) {
@@ -129,18 +184,25 @@ export class Engine {
       const kind = node[0] as string;
 
       switch (kind) {
-        case "bg":
-          this.state.bg = node[1] as string;
+        case "bg": {
+          const bg = node[1] as string;
+          this.state.bg = bg;
+          this.onBgChange?.(bg);
           break;
+        }
         case "char":
           this.state.charKey = (node[1] as string | null) ?? null;
           break;
         case "bgm":
-          this.onBgm?.(node[1] as string);
+          this.currentBgm = node[1] as string;
+          this.onBgm?.(this.currentBgm);
           break;
-        case "amb":
-          this.onAmb?.(node[1] as string);
+        case "amb": {
+          const amb = node[1] as string;
+          this.currentAmb = amb === "stop" ? null : amb;
+          this.onAmb?.(amb);
           break;
+        }
         case "sfx":
           this.onSfx?.(node[1] as string);
           break;
@@ -150,6 +212,7 @@ export class Engine {
         case "item": {
           const name = node[1] as string;
           this.state.items.push(name);
+          this.onSfx?.("item");
           this.frame = {
             type: "item",
             name,
@@ -162,8 +225,8 @@ export class Engine {
           break;
         case "flash":
           break;
-        case "say":
-          this.frame = {
+        case "say": {
+          const frame: Frame = {
             type: "text",
             mode: "say",
             speaker: node[1] as string,
@@ -173,23 +236,55 @@ export class Engine {
               node[2] as string,
             ),
           };
+          this.frame = frame;
+          this.logBacklog(frame);
           return;
-        case "mono":
-          this.frame = { type: "text", mode: "mono", speaker: null, text: node[1] as string, portrait: null };
-          return;
-        case "narr":
-          this.frame = { type: "text", mode: "narr", speaker: null, text: node[1] as string, portrait: null };
-          return;
-        case "act":
-          this.frame = { type: "text", mode: "act", speaker: null, text: node[1] as string, portrait: null };
-          return;
-        case "title":
-          this.frame = {
-            type: "title",
-            lines: node[1] as string[],
-            sub: (node[2] as string | null) ?? null,
+        }
+        case "mono": {
+          const frame: Frame = {
+            type: "text",
+            mode: "mono",
+            speaker: null,
+            text: node[1] as string,
+            portrait: null,
           };
+          this.frame = frame;
+          this.logBacklog(frame);
           return;
+        }
+        case "narr": {
+          const frame: Frame = {
+            type: "text",
+            mode: "narr",
+            speaker: null,
+            text: node[1] as string,
+            portrait: null,
+          };
+          this.frame = frame;
+          this.logBacklog(frame);
+          return;
+        }
+        case "act": {
+          const frame: Frame = {
+            type: "text",
+            mode: "act",
+            speaker: null,
+            text: node[1] as string,
+            portrait: null,
+          };
+          this.frame = frame;
+          this.logBacklog(frame);
+          return;
+        }
+        case "title": {
+          const lines = node[1] as string[];
+          const sub = (node[2] as string | null) ?? null;
+          if (lines[0]?.startsWith("CHAPTER") || lines[0]?.includes("CHAPTER")) {
+            this.label = lines.join(" ");
+          }
+          this.frame = { type: "title", lines, sub };
+          return;
+        }
         case "card":
           this.frame = {
             type: "card",
@@ -231,7 +326,10 @@ export class Engine {
           break;
         }
         case "ending": {
-          const code = determineEnding(this.state.stats, this.state.items.length);
+          const code = determineEnding(
+            this.state.stats,
+            this.state.items.length,
+          );
           this.endingCode = code;
           this.inEnding = true;
           this.stack.push({ nodes: GAME.endings[code] ?? [], i: 0 });
@@ -243,7 +341,6 @@ export class Engine {
     }
   }
 
-  /** 대사/타이틀/카드/결과/아이템 프레임에서 클릭 진행 */
   advance() {
     if (!this.frame) return;
     if (
@@ -253,6 +350,7 @@ export class Engine {
       this.frame.type === "result" ||
       this.frame.type === "item"
     ) {
+      this.captureCheckpoint();
       this.step();
     }
   }
@@ -262,6 +360,7 @@ export class Engine {
     const opt = this.pendingChoice[index];
     this.pendingChoice = null;
     this.applyEffects(opt.effects);
+    this.captureCheckpoint();
     this.stack.push({ nodes: opt.nodes, i: 0 });
     this.step();
   }
@@ -269,6 +368,7 @@ export class Engine {
   selectExplore(index: number) {
     const ex = this.currentExplore;
     if (!ex || ex.visited[index]) return;
+    this.captureCheckpoint();
     this.stack.push({
       nodes: ex.places[index].nodes,
       i: 0,
@@ -276,5 +376,46 @@ export class Engine {
       exploreIndex: index,
     });
     this.step();
+  }
+
+  captureCheckpoint() {
+    this.checkpoint = this.serialize();
+  }
+
+  serialize(profile?: Profile): EngineSnapshot {
+    return {
+      version: 1,
+      state: { ...this.state, stats: { ...this.state.stats }, conflict: { ...this.state.conflict }, items: [...this.state.items] },
+      stack: JSON.parse(JSON.stringify(this.stack)),
+      pendingChoice: this.pendingChoice
+        ? JSON.parse(JSON.stringify(this.pendingChoice))
+        : null,
+      currentExplore: this.currentExplore
+        ? JSON.parse(JSON.stringify(this.currentExplore))
+        : null,
+      inEnding: this.inEnding,
+      endingCode: this.endingCode,
+      done: this.done,
+      frame: this.frame ? JSON.parse(JSON.stringify(this.frame)) : null,
+      currentBgm: this.currentBgm,
+      currentAmb: this.currentAmb,
+      label: this.label,
+      profile: profile ?? this.checkpoint?.profile ?? {
+        name: "", gender: "g_x", grade: "grade_1", major: "maj_ec",
+        mbti: "ENFP", portrait: 1,
+        survey: { q1: null, q2: null, q3: null },
+      },
+      backlog: [...this.backlog],
+      savedAt: Date.now(),
+    };
+  }
+
+  static fromSnapshot(snap: EngineSnapshot): Engine {
+    return new Engine(snap);
+  }
+
+  getCheckpoint(profile: Profile): EngineSnapshot {
+    const base = this.checkpoint ?? this.serialize(profile);
+    return { ...base, profile, savedAt: Date.now() };
   }
 }

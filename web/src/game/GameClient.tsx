@@ -6,11 +6,19 @@ import { useLang } from "./useLang";
 import { ui, t, statLabel, type Lang } from "./gameData";
 import type { Profile } from "./profile";
 import type { GameState } from "./engine";
+import type { EngineSnapshot } from "./engine";
 import { CharacterCreator } from "./CharacterCreator";
 import { PlayView } from "./PlayView";
 import { LangSelector } from "./LangSelector";
+import { readSaveMeta, hasSave, deleteSave, loadSnapshot } from "./save";
 
-type Phase = "create" | "play" | "final" | "result";
+type Phase =
+  | "title"
+  | "create"
+  | "play"
+  | "final"
+  | "analysis"
+  | "result";
 
 function computeMatches(
   profile: Profile,
@@ -35,16 +43,74 @@ function computeMatches(
   return m;
 }
 
+function buildAnalysisRows(
+  profile: Profile,
+  state: GameState,
+  ending: string,
+  lang: Lang,
+) {
+  const s = state.conflict["군인"] ?? 0;
+  const h = state.conflict["인간"] ?? 0;
+  const C = state.stats["용기"] ?? 0;
+  const G = state.stats["죄책감"] ?? 0;
+  const I = state.stats["인간본능"] ?? 0;
+  const E = state.stats["공감"] ?? 0;
+  const sv = profile.survey;
+  const rows: {
+    dim: string;
+    pre: string;
+    ingame: string;
+    match: boolean;
+  }[] = [];
+
+  if (sv.q1) {
+    const lean = s >= h ? ui("an_lean_s", lang) : ui("an_lean_h", lang);
+    rows.push({
+      dim: ui("an_q1dim", lang),
+      pre: ui(sv.q1 === "A" ? "an_q1A" : "an_q1B", lang),
+      ingame: ui("an_q1meas", lang, { s, h, lean }),
+      match:
+        (sv.q1 === "A" && s >= h) || (sv.q1 === "B" && h >= s),
+    });
+  }
+  if (sv.q2) {
+    const cover = ending === "BAD" || G >= 60 || C < 60;
+    rows.push({
+      dim: ui("an_q2dim", lang),
+      pre: ui(sv.q2 === "A" ? "an_q2A" : "an_q2B", lang),
+      ingame: ui("an_q2meas", lang, { c: C, g: G, end: ending }),
+      match:
+        (sv.q2 === "A" && !cover) || (sv.q2 === "B" && cover),
+    });
+  }
+  if (sv.q3) {
+    const lean = I >= E ? ui("an_lean_i", lang) : ui("an_lean_e", lang);
+    rows.push({
+      dim: ui("an_q3dim", lang),
+      pre: ui(sv.q3 === "A" ? "an_q3A" : "an_q3B", lang),
+      ingame: ui("an_q3meas", lang, { i: I, e: E, lean }),
+      match:
+        (sv.q3 === "A" && I >= E) || (sv.q3 === "B" && E >= I),
+    });
+  }
+  return rows;
+}
+
 export function GameClient() {
   const [lang, setLang] = useLang();
-  const [phase, setPhase] = useState<Phase>("create");
+  const [phase, setPhase] = useState<Phase>("title");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [ending, setEnding] = useState<string>("NORMAL");
   const [finalState, setFinalState] = useState<GameState | null>(null);
   const [saveMsg, setSaveMsg] = useState<string>("");
+  const [continueSnap, setContinueSnap] = useState<EngineSnapshot | null>(null);
+  const [matches, setMatches] = useState(0);
+
+  const saveMeta = readSaveMeta();
 
   function handleCreated(p: Profile) {
     setProfile(p);
+    setContinueSnap(null);
     setPhase("play");
   }
 
@@ -54,7 +120,12 @@ export function GameClient() {
     setPhase("final");
   }
 
-  async function submitResult(state: GameState, p: Profile, code: string) {
+  async function submitResult(
+    state: GameState,
+    p: Profile,
+    code: string,
+    m: number,
+  ) {
     const payload = {
       name: p.name,
       gender: p.gender,
@@ -74,7 +145,7 @@ export function GameClient() {
       guilt: state.stats["죄책감"] ?? 0,
       courage: state.stats["용기"] ?? 0,
       fragments: state.items.length,
-      matches: computeMatches(p, state, code),
+      matches: m,
     };
     try {
       const res = await fetch("/api/results", {
@@ -89,19 +160,46 @@ export function GameClient() {
     }
   }
 
+  if (phase === "title") {
+    return (
+      <TitleScreen
+        lang={lang}
+        setLang={setLang}
+        hasSave={hasSave()}
+        saveMeta={saveMeta}
+        onNew={() => setPhase("create")}
+        onContinue={() => {
+          const snap = loadSnapshot();
+          if (snap) {
+            setProfile(snap.profile);
+            setContinueSnap(snap);
+            setPhase("play");
+          }
+        }}
+      />
+    );
+  }
+
   if (phase === "create") {
     return (
       <CharacterCreator lang={lang} setLang={setLang} onDone={handleCreated} />
     );
   }
 
-  if (phase === "play" && profile) {
+  if (phase === "play" && (profile || continueSnap)) {
+    const p = profile ?? continueSnap!.profile;
     return (
       <PlayView
         lang={lang}
         setLang={setLang}
-        profile={profile}
+        profile={p}
+        initialSnapshot={continueSnap}
         onEnd={handleEnd}
+        onTitle={() => {
+          setPhase("title");
+          setProfile(null);
+          setContinueSnap(null);
+        }}
       />
     );
   }
@@ -111,9 +209,28 @@ export function GameClient() {
       <FinalQuestion
         lang={lang}
         onPick={() => {
-          submitResult(finalState, profile, ending);
-          setPhase("result");
+          const m = computeMatches(profile, finalState, ending);
+          setMatches(m);
+          submitResult(finalState, profile, ending, m);
+          deleteSave();
+          setPhase("analysis");
         }}
+      />
+    );
+  }
+
+  if (phase === "analysis" && profile && finalState) {
+    const rows = buildAnalysisRows(profile, finalState, ending, lang);
+    const consistent = matches >= 2;
+    return (
+      <AnalysisScreen
+        lang={lang}
+        profile={profile}
+        ending={ending}
+        rows={rows}
+        matches={matches}
+        consistent={consistent}
+        onDone={() => setPhase("result")}
       />
     );
   }
@@ -127,6 +244,7 @@ export function GameClient() {
         state={finalState}
         ending={ending}
         saveMsg={saveMsg}
+        matches={matches}
       />
     );
   }
@@ -134,12 +252,71 @@ export function GameClient() {
   return null;
 }
 
+function TitleScreen({
+  lang,
+  setLang,
+  hasSave: saved,
+  saveMeta,
+  onNew,
+  onContinue,
+}: {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  hasSave: boolean;
+  saveMeta: { label: string; savedAt: number; name: string } | null;
+  onNew: () => void;
+  onContinue: () => void;
+}) {
+  return (
+    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col">
+      <div className="flex justify-end px-6 py-4">
+        <LangSelector lang={lang} setLang={setLang} />
+      </div>
+      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-8">
+        <div>
+          <h1 className="font-serif text-4xl sm:text-5xl text-amber-100 tracking-wide">
+            {ui("title_main", lang)}
+          </h1>
+          <p className="mt-4 text-lg text-amber-200/70 font-serif tracking-widest">
+            The Weight of Courage
+          </p>
+          <p className="mt-6 text-xs text-stone-600">{ui("menu_credit", lang)}</p>
+        </div>
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          <button
+            type="button"
+            onClick={onNew}
+            className="rounded-full bg-amber-700 px-8 py-3.5 text-base font-medium hover:bg-amber-600 transition-colors shadow-lg shadow-amber-900/30"
+          >
+            {ui("menu_start", lang)}
+          </button>
+          {saved && saveMeta && (
+            <button
+              type="button"
+              onClick={onContinue}
+              className="rounded-full border border-amber-800/60 px-8 py-3 text-sm text-amber-200 hover:border-amber-600 hover:bg-amber-900/20 transition-colors"
+            >
+              {ui("menu_continue", lang)}
+              <span className="block text-xs text-stone-500 mt-0.5">
+                {saveMeta.name} · {saveMeta.label || "..."}
+              </span>
+            </button>
+          )}
+        </div>
+        <Link href="/" className="text-xs text-stone-600 hover:text-stone-400">
+          ← 홈으로
+        </Link>
+      </main>
+    </div>
+  );
+}
+
 function FinalQuestion({
   lang,
   onPick,
 }: {
   lang: Lang;
-  onPick: (v: string) => void;
+  onPick: () => void;
 }) {
   const opts = ["fq1", "fq2", "fq3", "fq4"];
   return (
@@ -153,7 +330,7 @@ function FinalQuestion({
             <button
               key={k}
               type="button"
-              onClick={() => onPick(k)}
+              onClick={onPick}
               className="w-full rounded-lg border border-amber-800/50 bg-stone-900 px-5 py-4 text-left text-base hover:border-amber-500 hover:bg-amber-900/30 transition-colors"
             >
               {ui(k, lang)}
@@ -168,6 +345,83 @@ function FinalQuestion({
   );
 }
 
+function AnalysisScreen({
+  lang,
+  profile,
+  ending,
+  rows,
+  matches,
+  consistent,
+  onDone,
+}: {
+  lang: Lang;
+  profile: Profile;
+  ending: string;
+  rows: { dim: string; pre: string; ingame: string; match: boolean }[];
+  matches: number;
+  consistent: boolean;
+  onDone: () => void;
+}) {
+  return (
+    <div
+      className="min-h-screen bg-stone-950 text-stone-100 flex flex-col items-center justify-center px-6 cursor-pointer"
+      onClick={onDone}
+    >
+      <div className="max-w-2xl w-full space-y-6">
+        <div className="text-center">
+          <h1 className="font-serif text-2xl text-amber-100">
+            {ui("an_title", lang)}
+          </h1>
+          <p className="mt-2 text-sm text-stone-400">
+            {profile.name} · {ui(profile.grade, lang)} · {profile.mbti}
+          </p>
+          <p className="mt-1 text-xs text-amber-600">
+            {ui("an_ending", lang)}: {ui(`end_${ending}`, lang)}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-stone-800 bg-stone-900 overflow-hidden">
+          <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-stone-800/50 text-xs text-stone-500">
+            <span>{ui("an_pre", lang)}</span>
+            <span className="col-span-2">{ui("an_ingame", lang)}</span>
+            <span className="text-right">판정</span>
+          </div>
+          {rows.map((r, i) => (
+            <div
+              key={i}
+              className="grid grid-cols-4 gap-2 px-4 py-3 border-t border-stone-800 text-sm"
+            >
+              <span className="text-amber-300 text-xs">{r.dim}</span>
+              <span className="text-stone-400 text-xs">{r.pre}</span>
+              <span className="text-stone-200 text-xs">{r.ingame}</span>
+              <span
+                className={`text-right text-xs font-medium ${r.match ? "text-emerald-400" : "text-orange-400"}`}
+              >
+                {r.match ? ui("an_match", lang) : ui("an_diff", lang)}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-xl border border-amber-800/40 bg-amber-900/10 p-5 text-center">
+          <p className="text-sm text-amber-100 leading-relaxed">
+            {consistent
+              ? ui("an_sum_consistent", lang)
+              : ui("an_sum_mixed", lang)}
+          </p>
+          <p className="mt-2 text-xs text-stone-500">
+            {matches}/3 {ui("an_match", lang)}
+          </p>
+        </div>
+
+        <p className="text-center text-xs text-stone-600 animate-pulse">
+          {ui("an_footer", lang)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function ResultScreen({
   lang,
   setLang,
@@ -175,6 +429,7 @@ function ResultScreen({
   state,
   ending,
   saveMsg,
+  matches,
 }: {
   lang: Lang;
   setLang: (l: Lang) => void;
@@ -182,6 +437,7 @@ function ResultScreen({
   state: GameState;
   ending: string;
   saveMsg: string;
+  matches: number;
 }) {
   const stats: [string, number][] = [
     ["신뢰", state.stats["신뢰"] ?? 0],
@@ -215,7 +471,10 @@ function ResultScreen({
                   <span>{v}</span>
                 </div>
                 <div className="h-1.5 rounded bg-stone-800 mt-1">
-                  <div className="h-1.5 rounded bg-amber-600" style={{ width: `${v}%` }} />
+                  <div
+                    className="h-1.5 rounded bg-amber-600"
+                    style={{ width: `${v}%` }}
+                  />
                 </div>
               </div>
             ))}
@@ -226,17 +485,25 @@ function ResultScreen({
               {ui("conflict_soldier", lang)} {state.conflict["군인"] ?? 0}
             </span>
             <span>
-              {t("기억 조각", lang) ?? "기억 조각"} {state.items.length}/5
+              {ui("frag_result", lang, {
+                n: state.items.length,
+                t: 5,
+              })}
             </span>
           </div>
+          <p className="mt-2 text-xs text-stone-500 text-center">
+            {ui("an_match", lang)}: {matches}/3
+          </p>
         </div>
 
         {saveMsg === "saved" && (
-          <p className="mt-4 text-xs text-emerald-500">기록이 저장되었습니다.</p>
+          <p className="mt-4 text-xs text-emerald-500">
+            연구 데이터가 저장되었습니다.
+          </p>
         )}
         {saveMsg === "skip" && (
           <p className="mt-4 text-xs text-stone-600">
-            (로컬 미설정: 결과 저장은 배포 환경에서 활성화됩니다)
+            (Supabase 미설정: 배포 환경에서 결과가 자동 저장됩니다)
           </p>
         )}
 
@@ -246,7 +513,7 @@ function ResultScreen({
             onClick={() => window.location.reload()}
             className="rounded-lg bg-amber-700 px-6 py-2.5 text-sm font-medium hover:bg-amber-600"
           >
-            다시 플레이
+            {ui("menu_new", lang)}
           </button>
           <Link
             href="/"

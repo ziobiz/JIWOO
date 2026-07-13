@@ -1,80 +1,184 @@
 "use client";
 
-import { useEffect, useMemo, useReducer, useRef } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import Image from "next/image";
-import { Engine, type GameState } from "./engine";
+import { Engine, type EngineSnapshot, type GameState } from "./engine";
 import {
   GAME,
   t,
   nm,
   ui,
-  statLabel,
   imgSrc,
   portraitSrc,
   type Lang,
 } from "./gameData";
 import type { Profile } from "./profile";
 import { LangSelector } from "./LangSelector";
-
-const STAT_KEYS = ["신뢰", "공감", "인간본능", "사회적역할", "죄책감", "용기"];
+import { HudPanel } from "./HudPanel";
+import { PauseMenu } from "./PauseMenu";
+import { BacklogPanel } from "./BacklogPanel";
+import { getAudio } from "./audio";
+import { saveSnapshot, loadSnapshot, saveSettings, loadSettings } from "./save";
 
 export function PlayView({
   lang,
   setLang,
   profile,
+  initialSnapshot,
   onEnd,
+  onTitle,
 }: {
   lang: Lang;
   setLang: (l: Lang) => void;
   profile: Profile;
+  initialSnapshot?: EngineSnapshot | null;
   onEnd: (code: string, state: GameState) => void;
+  onTitle: () => void;
 }) {
   const engineRef = useRef<Engine | null>(null);
-  if (engineRef.current === null) engineRef.current = new Engine();
+  if (engineRef.current === null) {
+    engineRef.current = initialSnapshot
+      ? Engine.fromSnapshot({ ...initialSnapshot, profile })
+      : new Engine();
+  }
   const engine = engineRef.current;
+  const audio = getAudio();
   const [, force] = useReducer((x) => x + 1, 0);
   const endedRef = useRef(false);
 
-  const tick = () => {
+  const [paused, setPaused] = useState(false);
+  const [backlogOpen, setBacklogOpen] = useState(false);
+  const [pauseMsg, setPauseMsg] = useState("");
+  const [bgmVol, setBgmVol] = useState(() => loadSettings().bgm);
+  const [sfxVol, setSfxVol] = useState(() => loadSettings().sfx);
+  const [fade, setFade] = useState(false);
+  const [displayBg, setDisplayBg] = useState(engine.state.bg);
+  const prevBg = useRef(engine.state.bg);
+
+  // 오디오 훅 연결
+  useEffect(() => {
+    engine.onBgm = (k) => audio.playBgm(k);
+    engine.onAmb = (k) => audio.playAmb(k);
+    engine.onSfx = (k) => audio.playSfx(k);
+    engine.onBgChange = (bg) => {
+      if (bg !== prevBg.current) {
+        prevBg.current = bg;
+        setFade(true);
+        setTimeout(() => {
+          setDisplayBg(bg);
+          setFade(false);
+        }, 350);
+      }
+    };
+    audio.setBgmVol(bgmVol);
+    audio.setSfxVol(sfxVol);
+    if (engine.currentBgm) audio.playBgm(engine.currentBgm);
+    if (engine.currentAmb) audio.playAmb(engine.currentAmb);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const tick = useCallback(() => {
     if (engine.done && !endedRef.current) {
       endedRef.current = true;
+      audio.stopAll();
       onEnd(engine.endingCode ?? "NORMAL", engine.state);
       return;
     }
     force();
-  };
+  }, [engine, audio, onEnd]);
 
-  const advance = () => {
+  const unlockAndAdvance = () => {
+    audio.unlock();
     engine.advance();
     tick();
   };
+
   const choose = (i: number) => {
+    audio.unlock();
+    audio.playSfx("click");
     engine.choose(i);
     tick();
   };
+
   const explore = (i: number) => {
+    audio.unlock();
+    audio.playSfx("click");
     engine.selectExplore(i);
     tick();
   };
 
+  // 키보드
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (backlogOpen) setBacklogOpen(false);
+        else setPaused((p) => !p);
+        return;
+      }
+      if (paused || backlogOpen) return;
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
-        if (engine.frame && ["text", "title", "card", "result", "item"].includes(engine.frame.type))
-          advance();
+        if (
+          engine.frame &&
+          ["text", "title", "card", "result", "item"].includes(engine.frame.type)
+        )
+          unlockAndAdvance();
       }
     };
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY < -30 && !paused) setBacklogOpen(true);
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("wheel", onWheel, { passive: true });
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("wheel", onWheel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [paused, backlogOpen]);
+
+  const handleBgmVol = (v: number) => {
+    setBgmVol(v);
+    audio.setBgmVol(v);
+    saveSettings({ bgm: v, sfx: sfxVol, lang });
+  };
+  const handleSfxVol = (v: number) => {
+    setSfxVol(v);
+    audio.setSfxVol(v);
+    saveSettings({ bgm: bgmVol, sfx: v, lang });
+  };
+
+  const handleSave = () => {
+    saveSnapshot(engine.getCheckpoint(profile));
+    setPauseMsg(ui("saved_msg", lang));
+    audio.playSfx("item");
+    setTimeout(() => setPauseMsg(""), 2000);
+  };
+
+  const handleLoad = () => {
+    const snap = loadSnapshot();
+    if (!snap) {
+      setPauseMsg(ui("no_save", lang));
+      setTimeout(() => setPauseMsg(""), 2000);
+      return;
+    }
+    engineRef.current = Engine.fromSnapshot({ ...snap, profile: snap.profile });
+    prevBg.current = engineRef.current.state.bg;
+    setDisplayBg(engineRef.current.state.bg);
+    if (engineRef.current.currentBgm)
+      audio.playBgm(engineRef.current.currentBgm);
+    if (engineRef.current.currentAmb)
+      audio.playAmb(engineRef.current.currentAmb);
+    setPaused(false);
+    setPauseMsg(ui("load", lang));
+    setTimeout(() => setPauseMsg(""), 1500);
+    force();
+  };
 
   const frame = engine.frame;
   const state = engine.state;
+  const bgSrc = imgSrc(displayBg);
 
-  const bgSrc = imgSrc(state.bg);
-  // 좌측 인물: 대사 화자 우선(플레이어 or NPC 초상), 없으면 중앙 스프라이트
   const leftPortrait = useMemo(() => {
     if (frame?.type === "text") {
       if (frame.speaker === "나") return portraitSrc(profile.portrait);
@@ -83,93 +187,67 @@ export function PlayView({
     return null;
   }, [frame, profile.portrait]);
   const centerChar = !leftPortrait ? imgSrc(state.charKey) : null;
-
   const clickToAdvance =
     frame && ["text", "title", "card", "result", "item"].includes(frame.type);
 
   return (
     <div className="fixed inset-0 select-none overflow-hidden bg-black text-stone-100">
-      {/* 배경 */}
+      {/* 배경 + 페이드 */}
       {bgSrc && (
-        <Image src={bgSrc} alt="bg" fill priority sizes="100vw" className="object-cover" />
+        <Image
+          src={bgSrc}
+          alt="bg"
+          fill
+          priority
+          sizes="100vw"
+          className={`object-cover transition-opacity duration-700 ${fade ? "opacity-0" : "opacity-100"}`}
+        />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/40" />
 
-      {/* 중앙 스프라이트 */}
       {centerChar && (
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[78%] w-[40%]">
           <Image src={centerChar} alt="char" fill sizes="40vw" className="object-contain object-bottom" />
         </div>
       )}
-      {/* 좌측 인물 */}
       {leftPortrait && (
         <div className="absolute bottom-0 left-4 h-[72%] w-[30%] max-w-[380px]">
           <Image src={leftPortrait} alt="speaker" fill sizes="30vw" className="object-contain object-bottom" />
         </div>
       )}
 
-      {/* 상단 바 : 언어 + 플레이어 이름 */}
       <div className="absolute top-0 inset-x-0 flex items-start justify-between p-4 z-20">
         <LangSelector lang={lang} setLang={setLang} />
-        <div className="rounded-lg bg-black/50 px-3 py-1.5 text-right">
-          <p className="text-sm text-amber-100">{profile.name || nm("나", lang)}</p>
+        <div className="rounded-lg bg-black/50 px-3 py-1.5 text-right border border-stone-800/50">
+          <p className="text-sm text-amber-100">{profile.name}</p>
           <p className="text-[10px] text-stone-400">
             {ui(profile.grade, lang)} · {ui(profile.major, lang)} · {profile.mbti}
           </p>
         </div>
       </div>
 
-      {/* HUD : 스탯 */}
-      <div className="absolute top-20 right-4 z-10 w-44 space-y-1.5 rounded-lg bg-black/45 p-3">
-        {STAT_KEYS.map((k) => (
-          <div key={k}>
-            <div className="flex justify-between text-[10px] text-stone-300">
-              <span>{statLabel(k, lang)}</span>
-              <span>{state.stats[k] ?? 0}</span>
-            </div>
-            <div className="h-1 rounded bg-stone-800">
-              <div
-                className="h-1 rounded bg-amber-600"
-                style={{ width: `${Math.min(100, state.stats[k] ?? 0)}%` }}
-              />
-            </div>
-          </div>
-        ))}
-        <div className="flex items-center justify-between pt-1 text-[10px] text-stone-400">
-          <span>{ui("conflict_human", lang)} {state.conflict["인간"] ?? 0}</span>
-          <span>{state.conflict["군인"] ?? 0} {ui("conflict_soldier", lang)}</span>
-        </div>
-        <div className="flex gap-1 pt-1">
-          {GAME.constants.allFragments.map((f) => (
-            <span
-              key={f}
-              className={`h-2 w-2 rotate-45 ${state.items.includes(f) ? "bg-amber-400" : "bg-stone-700"}`}
-            />
-          ))}
-        </div>
-      </div>
+      <HudPanel lang={lang} state={state} />
 
-      {/* 클릭 진행 레이어 */}
-      {clickToAdvance && (
+      {clickToAdvance && !paused && (
         <button
           type="button"
           aria-label="advance"
-          onClick={advance}
+          onClick={unlockAndAdvance}
           className="absolute inset-0 z-0 cursor-pointer"
         />
       )}
 
-      {/* 프레임별 UI */}
+      {/* 프레임 UI */}
       <div className="absolute inset-x-0 bottom-0 z-10 p-4 sm:p-8 pointer-events-none">
         {frame?.type === "text" && (
-          <div className="mx-auto max-w-3xl pointer-events-none">
+          <div className="mx-auto max-w-3xl">
             {frame.speaker && (
-              <div className="mb-2 inline-block rounded-t-lg bg-amber-800/90 px-4 py-1 font-serif text-amber-50">
+              <div className="mb-1 inline-block rounded-t-lg bg-amber-800/90 px-4 py-1 font-serif text-amber-50 text-sm">
                 {nm(frame.speaker, lang, profile.name)}
               </div>
             )}
             <div
-              className={`rounded-lg bg-black/80 px-6 py-5 text-lg leading-relaxed ${
+              className={`rounded-lg border border-stone-700/50 bg-black/85 px-6 py-5 text-lg leading-relaxed backdrop-blur-sm ${
                 frame.mode === "mono"
                   ? "italic text-stone-300"
                   : frame.mode === "narr"
@@ -181,21 +259,21 @@ export function PlayView({
             >
               {t(frame.text, lang)}
             </div>
-            <p className="mt-2 text-right text-xs text-amber-500/70 animate-pulse">
-              Click / Space »»
+            <p className="mt-2 text-right text-xs text-amber-500/70">
+              <span className="animate-pulse">Click / Space »»</span>
             </p>
           </div>
         )}
 
         {frame?.type === "title" && (
-          <div className="fixed inset-0 flex flex-col items-center justify-center bg-black/70 pointer-events-none">
+          <div className="fixed inset-0 flex flex-col items-center justify-center bg-black/70">
             {frame.lines.map((ln, i) => (
-              <h2 key={i} className="font-serif text-3xl sm:text-4xl text-amber-50 py-1">
+              <h2 key={i} className="font-serif text-3xl sm:text-5xl text-amber-50 py-1 tracking-wide">
                 {t(ln, lang)}
               </h2>
             ))}
             {frame.sub && (
-              <p className="mt-4 max-w-xl text-center text-sm text-stone-400 italic">
+              <p className="mt-6 max-w-xl text-center text-sm text-stone-400 italic px-6">
                 {t(frame.sub, lang)}
               </p>
             )}
@@ -203,8 +281,8 @@ export function PlayView({
         )}
 
         {frame?.type === "card" && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/60 pointer-events-none">
-            <div className="w-full max-w-md rounded-xl border border-amber-700/60 bg-stone-900 p-6">
+          <div className="fixed inset-0 flex items-center justify-center bg-black/60">
+            <div className="w-full max-w-md rounded-xl border border-amber-700/60 bg-stone-900/95 p-6 shadow-2xl">
               <p className="text-xs tracking-widest text-amber-500 uppercase">
                 {frame.cardKind}
               </p>
@@ -221,7 +299,7 @@ export function PlayView({
         )}
 
         {frame?.type === "result" && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/80 pointer-events-none">
+          <div className="fixed inset-0 flex items-center justify-center bg-black/80">
             <h2 className="font-serif text-2xl text-amber-100 text-center px-6">
               {t(frame.title, lang)}
             </h2>
@@ -229,10 +307,18 @@ export function PlayView({
         )}
 
         {frame?.type === "item" && (
-          <div className="fixed inset-0 flex flex-col items-center justify-center bg-black/80 pointer-events-none">
-            <div className="h-16 w-16 rotate-45 bg-amber-400 animate-pulse" />
-            <p className="mt-6 text-xs tracking-widest text-amber-500">MEMORY FRAGMENT</p>
-            <h3 className="mt-2 font-serif text-2xl text-amber-100">{t(frame.name, lang)}</h3>
+          <div className="fixed inset-0 flex flex-col items-center justify-center bg-black/85">
+            <div className="relative">
+              <div className="h-20 w-20 rotate-45 bg-amber-400 animate-pulse shadow-[0_0_30px_rgba(251,191,36,0.6)]" />
+              <div className="absolute inset-0 animate-ping h-20 w-20 rotate-45 bg-amber-300/30" />
+            </div>
+            <p className="mt-8 text-xs tracking-[0.3em] text-amber-500">
+              {ui("frag_get", lang)}
+            </p>
+            <h3 className="mt-2 font-serif text-2xl text-amber-100">
+              {t(frame.name, lang)}
+            </h3>
+            <p className="mt-4 text-xs text-stone-500">{ui("frag_get_hint", lang)}</p>
           </div>
         )}
 
@@ -243,7 +329,7 @@ export function PlayView({
                 key={o.index}
                 type="button"
                 onClick={() => choose(o.index)}
-                className="block w-full rounded-lg border border-amber-800/50 bg-black/80 px-5 py-3 text-left text-base text-stone-100 hover:border-amber-500 hover:bg-amber-900/40 transition-colors"
+                className="block w-full rounded-lg border border-amber-800/50 bg-black/85 px-5 py-3.5 text-left text-base text-stone-100 hover:border-amber-500 hover:bg-amber-900/40 transition-all backdrop-blur-sm"
               >
                 {t(o.label, lang)}
               </button>
@@ -274,9 +360,42 @@ export function PlayView({
                 </button>
               ))}
             </div>
+            <p className="mt-2 text-center text-xs text-stone-600">
+              {ui("explore_footer", lang, {
+                done: frame.places.filter((p) => p.visited).length,
+                total: frame.places.length,
+              })}
+            </p>
           </div>
         )}
       </div>
+
+      {paused && (
+        <PauseMenu
+          lang={lang}
+          bgmVol={bgmVol}
+          sfxVol={sfxVol}
+          onBgmVol={handleBgmVol}
+          onSfxVol={handleSfxVol}
+          onResume={() => setPaused(false)}
+          onSave={handleSave}
+          onLoad={handleLoad}
+          onTitle={() => {
+            audio.stopAll();
+            onTitle();
+          }}
+          message={pauseMsg}
+        />
+      )}
+
+      {backlogOpen && (
+        <BacklogPanel
+          lang={lang}
+          entries={engine.backlog}
+          playerName={profile.name}
+          onClose={() => setBacklogOpen(false)}
+        />
+      )}
     </div>
   );
 }

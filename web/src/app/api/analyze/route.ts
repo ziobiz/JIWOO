@@ -73,5 +73,21 @@ export async function GET(request: Request) {
   }
 
   const report = buildReport(rows, source);
-  return NextResponse.json(report);
+  return NextResponse.json({
+    ...report,
+    recentPlays: rows.slice(0, 100).map((r) => ({
+      name: r.name,
+      gender: r.gender,
+      grade: r.grade,
+      mbti: r.mbti,
+      ending: r.ending,
+      human: r.human,
+      soldier: r.soldier,
+      courage: r.courage,
+      empathy: r.empathy,
+      fragments: r.fragments,
+      matches: r.matches,
+      created_at: r.created_at,
+    })),
+  });
 }
