@@ -97,7 +97,7 @@ export default function AdminDashboard() {
   // ── 로그인 게이트 : 인증 전에는 대시보드를 노출하지 않는다 ──
   if (!authed) {
     return (
-      <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col items-center justify-center px-6">
+      <div className="relative min-h-screen bg-stone-950 text-stone-100 flex flex-col items-center justify-center px-6 pb-24">
         <div className="w-full max-w-sm rounded-2xl border border-stone-800 bg-stone-900 p-8 space-y-6">
           <div className="text-center space-y-1">
             <p className="text-xs text-amber-600 tracking-[0.3em]">ADMIN ONLY</p>
@@ -137,6 +137,7 @@ export default function AdminDashboard() {
         >
           ← 게임 홈으로
         </Link>
+        <CreditsFooter className="absolute bottom-0 inset-x-0" />
       </div>
     );
   }
@@ -366,7 +367,27 @@ export default function AdminDashboard() {
           </>
         )}
       </main>
+      <CreditsFooter />
     </div>
+  );
+}
+
+function CreditsFooter({ className = "" }: { className?: string }) {
+  return (
+    <footer className={`px-6 py-6 text-center space-y-2 border-t border-stone-900 ${className}`}>
+      <p className="text-[11px] text-stone-500 leading-relaxed">
+        제공: 근현대 미국 문학 탐구 연구회
+        <span className="mx-1.5 text-stone-700">ㅣ</span>
+        연구회원: 3학년 1반 박지수 이지우
+        <span className="mx-1.5 text-stone-700">ㅣ</span>
+        그림: 석경원
+        <span className="mx-1.5 text-stone-700">ㅣ</span>
+        소속: 동두천외국어고등학교
+      </p>
+      <p className="text-xs text-stone-700">
+        © The Weight of Courage · 원작 Stephen Crane, 『The Red Badge of Courage』
+      </p>
+    </footer>
   );
 }
 
