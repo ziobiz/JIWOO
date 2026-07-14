@@ -92,7 +92,7 @@ HAIR_COUNT = 5
 HAIR_COLORS = [(38, 30, 26), (96, 62, 40), (170, 132, 74),
                (78, 80, 88), (150, 96, 128)]
 SKIN = (238, 205, 176)
-NAME_MAX = {"KR": 5, "JP": 5, "CH": 5, "EN": 10}   # 언어별 이름 글자수 제한
+NAME_MAX = {"KR": 10, "JP": 10, "CH": 10, "EN": 10}   # 언어별 이름 글자수 제한
 
 IMG_BASE = {
     "henry": "henry", "jim": "jim", "wilson": "wilson",

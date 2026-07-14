@@ -22,7 +22,7 @@ export function useLang(): [Lang, (l: Lang) => void] {
   return [lang, setLang];
 }
 
-export const NAME_MAX: Record<Lang, number> = { KR: 5, JP: 5, CH: 5, EN: 10 };
+export const NAME_MAX: Record<Lang, number> = { KR: 10, JP: 10, CH: 10, EN: 10 };
 export const LANG_FLAG: Record<Lang, string> = {
   KR: "🇰🇷",
   EN: "🇺🇸",
