@@ -218,7 +218,7 @@ UI = {
                "JP": "グループ課題で、いつも助けてくれたメンバーが突然白紙を提出しました。評価基準では未提出と報告すべきです。あなたの選択は？"},
     "q1v2_a": {"KR": "기준대로 미제출로 보고한다. 예외는 없다.", "EN": "Report it as incomplete by the rules. No exceptions.", "CH": "按标准记为未提交。没有例外。", "JP": "基準どおり未提出と報告する。例外はない。"},
     "q1v2_b": {"KR": "사정을 듣고 보완할 시간을 준다. 이번만 봐준다.", "EN": "Hear them out and give time to fix it. Let it slide once.", "CH": "先听原因并给补交时间。这一次通融。", "JP": "事情を聞いて手直しの時間を与える。今回だけ見逃す。"},
-    "q1v3_t": {"KR": "편의점 알바입니다. 평소 폐점 手伝던 단골이 거스름돈 천 원이 부족합니다. 계산대 규정은 정확히 받아야 합니다. 당신의 선택은?",
+    "q1v3_t": {"KR": "편의점 알바입니다. 평소 폐점 도와주던 단골이 거스름돈 천 원이 부족합니다. 계산대 규정은 정확히 받아야 합니다. 당신의 선택은?",
                "EN": "You're working at a convenience store. A regular who often helps lock up is short ₩1,000. Policy says charge the exact amount. Your choice?",
                "CH": "你在便利店兼职。常帮你打烊的熟客少带一千韩元。规定必须足额收款。你的选择是？",
                "JP": "コンビニのバイト。いつも閉店を手伝ってくれる常連が千円足りません。規定では正確に受け取るべきです。あなたの選択は？"},
