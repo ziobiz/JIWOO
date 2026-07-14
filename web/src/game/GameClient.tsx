@@ -247,6 +247,7 @@ export function GameClient() {
         ending={ending}
         saveMsg={saveMsg}
         matches={matches}
+        onBack={() => setPhase("analysis")}
       />
     );
   }
@@ -456,6 +457,7 @@ function ResultScreen({
   ending,
   saveMsg,
   matches,
+  onBack,
 }: {
   lang: Lang;
   setLang: (l: Lang) => void;
@@ -464,6 +466,7 @@ function ResultScreen({
   ending: string;
   saveMsg: string;
   matches: number;
+  onBack: () => void;
 }) {
   const stats: [string, number][] = [
     ["신뢰", state.stats["신뢰"] ?? 0],
@@ -533,7 +536,14 @@ function ResultScreen({
           </p>
         )}
 
-        <div className="mt-8 flex justify-center gap-3">
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-lg border border-stone-700 px-6 py-2.5 text-sm text-stone-300 hover:border-amber-800 hover:text-amber-100"
+          >
+            {ui("menu_back", lang)}
+          </button>
           <button
             type="button"
             onClick={() => window.location.reload()}

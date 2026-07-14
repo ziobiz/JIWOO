@@ -75,6 +75,7 @@ UI = {
     # 시작 메뉴 / 이어하기
     "menu_continue": {"KR": "이어하기", "EN": "Continue", "CH": "继续游戏", "JP": "つづきから"},
     "menu_new":      {"KR": "새 이야기", "EN": "New Story", "CH": "新游戏", "JP": "はじめから"},
+    "menu_back":     {"KR": "뒤로가기", "EN": "Back", "CH": "返回", "JP": "戻る"},
     # 일시정지 / 설정 메뉴
     "pause_title": {"KR": "일시정지", "EN": "Paused", "CH": "暂停", "JP": "一時停止"},
     "resume":      {"KR": "계속하기", "EN": "Resume", "CH": "继续", "JP": "再開"},
