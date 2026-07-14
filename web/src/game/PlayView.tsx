@@ -269,7 +269,7 @@ export function PlayView({
       )}
 
       {/* 프레임 UI */}
-      <div className="absolute inset-x-0 bottom-0 z-10 p-4 sm:p-8 pointer-events-none">
+      <div className="game-compact-dialog absolute inset-x-0 bottom-0 z-10 p-3 sm:p-8 pointer-events-none">
         {frame?.type === "text" && (
           <div className="mx-auto max-w-3xl">
             {frame.speaker && (

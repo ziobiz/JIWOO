@@ -146,6 +146,8 @@ for i in range(1, 17):
     IMG_BASE[f"bg{i}"] = f"bg({i})"
 for i in range(1, 17):
     IMG_BASE[f"portrait{i}"] = f"portrait{i}"
+for k in ("end_true", "end_good", "end_normal", "end_bad", "end_hidden"):
+    IMG_BASE[k] = k
 
 FRAGMENT_ICON = {
     "군복": "clothes", "짐의 군번줄": "ballchain", "붉은 손수건": "scarf",

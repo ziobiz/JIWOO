@@ -54,7 +54,7 @@ export function HudPanel({ lang, state }: { lang: Lang; state: GameState }) {
   const humanPct = (human / total) * 100;
 
   return (
-    <div className="absolute top-20 right-4 z-10 w-56 rounded-xl border border-amber-900/40 bg-gradient-to-b from-black/70 to-stone-950/80 backdrop-blur-sm p-3.5 shadow-xl">
+    <div className="absolute top-16 right-2 z-10 w-[11.5rem] sm:top-20 sm:right-4 sm:w-56 max-h-[78dvh] overflow-y-auto rounded-xl border border-amber-900/40 bg-gradient-to-b from-black/70 to-stone-950/80 backdrop-blur-sm p-2.5 sm:p-3.5 shadow-xl scale-90 sm:scale-100 origin-top-right">
       {/* 갈등의 저울 */}
       <div className="mb-3">
         <p className="text-[9px] tracking-[0.25em] text-amber-600/80 mb-1.5 uppercase">

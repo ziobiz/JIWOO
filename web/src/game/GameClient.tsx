@@ -12,6 +12,7 @@ import { CharacterCreator } from "./CharacterCreator";
 import { PlayView } from "./PlayView";
 import { LangSelector } from "./LangSelector";
 import { CreditsFooter } from "./CreditsFooter";
+import { LandscapeGate } from "./LandscapeGate";
 import { readSaveMeta, hasSave, deleteSave, loadSnapshot } from "./save";
 
 type Phase =
@@ -110,6 +111,10 @@ export function GameClient() {
 
   const saveMeta = readSaveMeta();
 
+  const gate = (node: React.ReactNode) => (
+    <LandscapeGate hint={ui("rotate_hint", lang)}>{node}</LandscapeGate>
+  );
+
   function handleCreated(p: Profile) {
     setProfile(p);
     setContinueSnap(null);
@@ -163,7 +168,7 @@ export function GameClient() {
   }
 
   if (phase === "title") {
-    return (
+    return gate(
       <TitleScreen
         lang={lang}
         setLang={setLang}
@@ -178,19 +183,19 @@ export function GameClient() {
             setPhase("play");
           }
         }}
-      />
+      />,
     );
   }
 
   if (phase === "create") {
-    return (
-      <CharacterCreator lang={lang} setLang={setLang} onDone={handleCreated} />
+    return gate(
+      <CharacterCreator lang={lang} setLang={setLang} onDone={handleCreated} />,
     );
   }
 
   if (phase === "play" && (profile || continueSnap)) {
     const p = profile ?? continueSnap!.profile;
-    return (
+    return gate(
       <PlayView
         lang={lang}
         setLang={setLang}
@@ -202,12 +207,12 @@ export function GameClient() {
           setProfile(null);
           setContinueSnap(null);
         }}
-      />
+      />,
     );
   }
 
   if (phase === "final" && profile && finalState) {
-    return (
+    return gate(
       <FinalQuestion
         lang={lang}
         onPick={() => {
@@ -217,14 +222,14 @@ export function GameClient() {
           deleteSave();
           setPhase("analysis");
         }}
-      />
+      />,
     );
   }
 
   if (phase === "analysis" && profile && finalState) {
     const rows = buildAnalysisRows(profile, finalState, ending, lang);
     const consistent = matches >= 2;
-    return (
+    return gate(
       <AnalysisScreen
         lang={lang}
         profile={profile}
@@ -233,12 +238,12 @@ export function GameClient() {
         matches={matches}
         consistent={consistent}
         onDone={() => setPhase("result")}
-      />
+      />,
     );
   }
 
   if (phase === "result" && profile && finalState) {
-    return (
+    return gate(
       <ResultScreen
         lang={lang}
         setLang={setLang}
@@ -248,7 +253,7 @@ export function GameClient() {
         saveMsg={saveMsg}
         matches={matches}
         onBack={() => setPhase("analysis")}
-      />
+      />,
     );
   }
 
@@ -391,12 +396,12 @@ function AnalysisScreen({
 }) {
   return (
     <div
-      className="min-h-screen bg-stone-950 text-stone-100 flex flex-col items-center justify-center px-6 cursor-pointer"
+      className="min-h-dvh bg-stone-950 text-stone-100 flex flex-col items-center justify-center px-4 sm:px-6 py-6 cursor-pointer"
       onClick={onDone}
     >
-      <div className="max-w-2xl w-full space-y-6">
+      <div className="max-w-2xl w-full space-y-4 sm:space-y-6">
         <div className="text-center">
-          <h1 className="font-serif text-2xl text-amber-100">
+          <h1 className="font-serif text-xl sm:text-2xl text-amber-100">
             {ui("an_title", lang)}
           </h1>
           <p className="mt-2 text-sm text-stone-400">
@@ -407,31 +412,33 @@ function AnalysisScreen({
           </p>
         </div>
 
-        <div className="rounded-xl border border-stone-800 bg-stone-900 overflow-hidden">
-          <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-stone-800/50 text-xs text-stone-500">
-            <span>{ui("an_pre", lang)}</span>
-            <span className="col-span-2">{ui("an_ingame", lang)}</span>
-            <span className="text-right">판정</span>
-          </div>
-          {rows.map((r, i) => (
-            <div
-              key={i}
-              className="grid grid-cols-4 gap-2 px-4 py-3 border-t border-stone-800 text-sm"
-            >
-              <span className="text-amber-300 text-xs">{r.dim}</span>
-              <span className="text-stone-400 text-xs">{r.pre}</span>
-              <span className="text-stone-200 text-xs">{r.ingame}</span>
-              <span
-                className={`text-right text-xs font-medium ${r.match ? "text-emerald-400" : "text-orange-400"}`}
-              >
-                {r.match ? ui("an_match", lang) : ui("an_diff", lang)}
-              </span>
+        <div className="rounded-xl border border-stone-800 bg-stone-900 overflow-hidden overflow-x-auto">
+          <div className="min-w-[520px] sm:min-w-0">
+            <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-stone-800/50 text-xs text-stone-500">
+              <span>{ui("an_pre", lang)}</span>
+              <span className="col-span-2">{ui("an_ingame", lang)}</span>
+              <span className="text-right">판정</span>
             </div>
-          ))}
+            {rows.map((r, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-4 gap-2 px-4 py-3 border-t border-stone-800 text-sm"
+              >
+                <span className="text-amber-300 text-xs">{r.dim}</span>
+                <span className="text-stone-400 text-xs">{r.pre}</span>
+                <span className="text-stone-200 text-xs">{r.ingame}</span>
+                <span
+                  className={`text-right text-xs font-medium ${r.match ? "text-emerald-400" : "text-orange-400"}`}
+                >
+                  {r.match ? ui("an_match", lang) : ui("an_diff", lang)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="rounded-xl border border-amber-800/40 bg-amber-900/10 p-5 text-center">
-          <p className="text-sm text-amber-100 leading-relaxed">
+          <p className="text-sm text-amber-100 leading-relaxed whitespace-pre-line">
             {consistent
               ? ui("an_sum_consistent", lang)
               : ui("an_sum_mixed", lang)}

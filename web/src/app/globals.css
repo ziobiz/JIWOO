@@ -91,6 +91,85 @@ code {
   }
 }
 
+/* ── 모바일 세로 모드: 가로 회전 강제 안내 ── */
+.rotate-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  background: #0c0a09;
+  color: #fef3c7;
+  padding: 2rem;
+  text-align: center;
+}
+
+.rotate-gate__phone {
+  width: 42px;
+  height: 72px;
+  border: 3px solid #f59e0b;
+  border-radius: 8px;
+  position: relative;
+  animation: rotate-cue 1.6s ease-in-out infinite;
+}
+
+.rotate-gate__phone::after {
+  content: "";
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  width: 14px;
+  height: 3px;
+  margin-left: -7px;
+  background: #f59e0b;
+  border-radius: 2px;
+}
+
+.rotate-gate__text {
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+
+@keyframes rotate-cue {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  40%,
+  60% {
+    transform: rotate(90deg);
+  }
+}
+
+.game-root--blocked {
+  visibility: hidden;
+  pointer-events: none;
+  height: 0;
+  overflow: hidden;
+}
+
+/* 짧은 가로(휴대폰 landscape) 반응형 — 플레이/HUD 압축 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .game-compact-dialog {
+    padding-bottom: 0.5rem !important;
+  }
+  .game-compact-dialog .text-lg {
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+}
+
+/* 홈·관리도 좁은 화면 여백 */
+@media (max-width: 640px) {
+  .home-hero-pad {
+    padding-top: 4rem;
+    padding-bottom: 3rem;
+  }
+}
+
 /* ── 관리자 대시보드 인쇄 / PDF 저장 ── */
 @media print {
   .no-print {

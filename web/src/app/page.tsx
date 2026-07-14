@@ -33,13 +33,13 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Home() {
   const b = await resolveBranding();
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col">
-      <main className="flex-1 max-w-2xl w-full mx-auto px-6 py-24 flex flex-col items-center text-center gap-12">
+    <div className="min-h-dvh bg-stone-950 text-stone-100 flex flex-col">
+      <main className="home-hero-pad flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 py-16 sm:py-24 flex flex-col items-center text-center gap-8 sm:gap-12">
         <div className="space-y-4">
           <p className="text-xs tracking-[0.4em] text-amber-600 uppercase">
             A Visual Novel
           </p>
-          <h1 className="text-5xl sm:text-6xl font-serif text-amber-50 leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-serif text-amber-50 leading-tight">
             붉은 무공훈장
           </h1>
           <p className="text-lg text-stone-400 font-serif italic">
