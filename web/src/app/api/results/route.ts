@@ -43,12 +43,13 @@ export async function POST(request: Request) {
       matches: body.matches ?? 0,
     };
 
-    const supabase = getSupabasePublic();
+    // 서버 API — service role 로 저장 (anon 은 INSERT 후 SELECT RLS 에 막힘)
+    const supabase = getSupabaseAdmin() ?? getSupabasePublic();
     if (!supabase) {
       return NextResponse.json(
         {
           error: "Supabase not configured",
-          hint: "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local",
+          hint: "Set NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY in Vercel env",
         },
         { status: 503 },
       );
@@ -58,14 +59,14 @@ export async function POST(request: Request) {
       .from("play_results")
       .insert(row)
       .select("id")
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("[results POST]", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: true, id: data?.id });
+    return NextResponse.json({ ok: true, id: data?.id ?? null });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
