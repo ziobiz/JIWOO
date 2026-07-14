@@ -19,6 +19,12 @@ import { PauseMenu } from "./PauseMenu";
 import { BacklogPanel } from "./BacklogPanel";
 import { getAudio } from "./audio";
 import { saveSnapshot, loadSnapshot, saveSettings, loadSettings } from "./save";
+import { CharacterBust } from "./CharacterBust";
+
+/** story 의 player1/player2 — 플레이어가 고른 초상으로 대체하는 키 */
+function isPlayerCharKey(key: string | null | undefined): boolean {
+  return !!key && (key === "player1" || key === "player2" || key.startsWith("player"));
+}
 
 export function PlayView({
   lang,
@@ -198,14 +204,25 @@ export function PlayView({
   const state = engine.state;
   const bgSrc = imgSrc(displayBg);
 
-  const leftPortrait = useMemo(() => {
+  /**
+   * 대사/장면 캐릭터 — 항상 화면 가운데.
+   * - 화자가 "나" 이거나 장면 키가 player*: 플레이어가 확정한 초상
+   * - NPC 화자: 감정 초상
+   * - 그 외(내레이션 등): 장면 char 키 (player면 선택 초상으로 치환)
+   * 기본 player(1) 이미지는 "선택 없음·랜덤" 폴백일 때만 쓰이며,
+   * 캐릭터 생성에서 초상을 고르면 반드시 그 초상으로 대체한다.
+   */
+  const centerPortrait = useMemo(() => {
     if (frame?.type === "text") {
       if (frame.speaker === "나") return portraitSrc(profile.portrait);
       if (frame.portrait) return imgSrc(frame.portrait);
+      if (isPlayerCharKey(state.charKey)) return portraitSrc(profile.portrait);
+      return imgSrc(state.charKey);
     }
-    return null;
-  }, [frame, profile.portrait]);
-  const centerChar = !leftPortrait ? imgSrc(state.charKey) : null;
+    if (isPlayerCharKey(state.charKey)) return portraitSrc(profile.portrait);
+    return imgSrc(state.charKey);
+  }, [frame, profile.portrait, state.charKey]);
+
   const clickToAdvance =
     frame && ["text", "title", "card", "result", "item"].includes(frame.type);
 
@@ -224,14 +241,9 @@ export function PlayView({
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/40" />
 
-      {centerChar && (
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[78%] w-[40%]">
-          <Image src={centerChar} alt="char" fill sizes="40vw" className="object-contain object-bottom" />
-        </div>
-      )}
-      {leftPortrait && (
-        <div className="absolute bottom-0 left-4 h-[72%] w-[30%] max-w-[380px]">
-          <Image src={leftPortrait} alt="speaker" fill sizes="30vw" className="object-contain object-bottom" />
+      {centerPortrait && (
+        <div className="pointer-events-none absolute bottom-0 left-1/2 z-[5] h-[78%] w-[min(42%,520px)] -translate-x-1/2">
+          <CharacterBust src={centerPortrait} alt="character" />
         </div>
       )}
 
