@@ -257,7 +257,7 @@ export function PlayView({
         </div>
       </div>
 
-      <HudPanel lang={lang} state={state} />
+      <HudPanel lang={lang} state={state} playerName={profile.name} />
 
       {clickToAdvance && !paused && (
         <button
@@ -288,7 +288,7 @@ export function PlayView({
                       : "text-stone-50"
               }`}
             >
-              {t(frame.text, lang)}
+              {t(frame.text, lang, profile.name)}
             </div>
             <p className="mt-2 text-right text-xs text-amber-500/70">
               <span className="animate-pulse">Click / Space »»</span>
@@ -300,12 +300,12 @@ export function PlayView({
           <div className="fixed inset-0 flex flex-col items-center justify-center bg-black/70">
             {frame.lines.map((ln, i) => (
               <h2 key={i} className="font-serif text-3xl sm:text-5xl text-amber-50 py-1 tracking-wide">
-                {t(ln, lang)}
+                {t(ln, lang, profile.name)}
               </h2>
             ))}
             {frame.sub && (
               <p className="mt-6 max-w-xl text-center text-sm text-stone-400 italic px-6">
-                {t(frame.sub, lang)}
+                {t(frame.sub, lang, profile.name)}
               </p>
             )}
           </div>
@@ -318,11 +318,11 @@ export function PlayView({
                 {frame.cardKind}
               </p>
               <h3 className="mt-1 font-serif text-lg text-amber-100">
-                {t(frame.title, lang)}
+                {t(frame.title, lang, profile.name)}
               </h3>
               <div className="mt-3 space-y-1 text-sm text-stone-300">
                 {frame.body.map((b, i) => (
-                  <p key={i}>{t(b, lang)}</p>
+                  <p key={i}>{t(b, lang, profile.name)}</p>
                 ))}
               </div>
             </div>
@@ -332,7 +332,7 @@ export function PlayView({
         {frame?.type === "result" && (
           <div className="fixed inset-0 flex items-center justify-center bg-black/80">
             <h2 className="font-serif text-2xl text-amber-100 text-center px-6">
-              {t(frame.title, lang)}
+              {t(frame.title, lang, profile.name)}
             </h2>
           </div>
         )}
@@ -347,7 +347,7 @@ export function PlayView({
               {ui("frag_get", lang)}
             </p>
             <h3 className="mt-2 font-serif text-2xl text-amber-100">
-              {t(frame.name, lang)}
+              {t(frame.name, lang, profile.name)}
             </h3>
             <p className="mt-4 text-xs text-stone-500">{ui("frag_get_hint", lang)}</p>
           </div>
@@ -362,7 +362,7 @@ export function PlayView({
                 onClick={() => choose(o.index)}
                 className="block w-full rounded-lg border border-amber-800/50 bg-black/85 px-5 py-3.5 text-left text-base text-stone-100 hover:border-amber-500 hover:bg-amber-900/40 transition-all backdrop-blur-sm"
               >
-                {t(o.label, lang)}
+                {t(o.label, lang, profile.name)}
               </button>
             ))}
           </div>
@@ -386,7 +386,7 @@ export function PlayView({
                       : "border-amber-800/50 bg-black/80 text-stone-100 hover:border-amber-500 hover:bg-amber-900/40"
                   }`}
                 >
-                  {t(p.name, lang)}
+                  {t(p.name, lang, profile.name)}
                   {p.visited && " ✓"}
                 </button>
               ))}

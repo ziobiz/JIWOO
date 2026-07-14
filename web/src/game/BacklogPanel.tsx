@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef } from "react";
 import { t, nm, ui, type Lang } from "./gameData";
@@ -64,7 +64,7 @@ export function BacklogPanel({
                         : "text-stone-200"
                   }
                 >
-                  {t(e.text, lang)}
+                  {t(e.text, lang, playerName)}
                 </span>
               </div>
             ))

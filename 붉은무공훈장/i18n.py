@@ -11,6 +11,8 @@
 원문(한국어)을 키로 사용하며, 등록되지 않은 문자열은 원문으로 폴백한다.
 """
 
+import re
+
 LANGS = ["KR", "EN", "CH", "JP"]          # 상단 국기 표시 순서
 LANG_NATIVE = {"KR": "한국어", "EN": "English", "CH": "中文", "JP": "日本語"}
 current = "KR"
@@ -112,7 +114,7 @@ UI = {
     "frag_hud":    {"KR": "기억 조각  {n} / {t}", "EN": "Fragments  {n} / {t}", "CH": "记忆碎片  {n} / {t}", "JP": "記憶の欠片  {n} / {t}"},
     # HUD 스탯 그룹 제목 (직관적 분류)
     "grp_relation": {"KR": "헨리와의 관계", "EN": "Bond with Henry", "CH": "与亨利的关系", "JP": "ヘンリーとの絆"},
-    "grp_player":   {"KR": "플레이어 능력치", "EN": "Your Traits", "CH": "玩家能力", "JP": "プレイヤー能力"},
+    "grp_player":   {"KR": "{name} 능력치", "EN": "{name}'s Traits", "CH": "{name}的能力", "JP": "{name}の能力"},
     "grp_henry":    {"KR": "헨리의 상태", "EN": "Henry's State", "CH": "亨利的状态", "JP": "ヘンリーの状態"},
     "stat_word":   {"KR": "스탯", "EN": "STATS", "CH": "状态", "JP": "ステータス"},
     "frag_result": {"KR": "기억 조각  {n}/{t}", "EN": "Fragments  {n}/{t}", "CH": "记忆碎片  {n}/{t}", "JP": "記憶の欠片  {n}/{t}"},
@@ -773,9 +775,9 @@ TR = {
     "헨리는 결국 아무 말도 하지 않는다.": {"EN": "In the end, Henry says nothing.", "CH": "亨利最终什么也没说。", "JP": "ヘンリーは結局、何も言わなかった。"},
     "밤. 병사들이 잠들었다. 헨리 혼자 깨어 있다.": {"EN": "Night. The soldiers are asleep. Only Henry is awake.", "CH": "夜晚。士兵们都睡了。只有亨利醒着。", "JP": "夜。兵士たちは眠りについた。ヘンリーだけが起きている。"},
     "플레이어. 나, 사실 아직도 무섭다. 다음 전투에서도 도망칠까 봐.":
-        {"EN": "You know, I'm... honestly still scared. Afraid I'll run again in the next battle.",
-         "CH": "你啊。其实我…到现在还是害怕。怕下一场仗又会逃跑。",
-         "JP": "なあ。俺、実はまだ怖いんだ。次の戦いでも逃げちまうんじゃないかって。"},
+        {"EN": "Player. I'm... honestly still scared. Afraid I'll run again in the next battle.",
+         "CH": "玩家。其实我…到现在还是害怕。怕下一场仗又会逃跑。",
+         "JP": "プレイヤー。俺、実はまだ怖いんだ。次の戦いでも逃げちまうんじゃないかって。"},
     "① \"도망칠 수도 있어.\"": {"EN": "\"You might run. And that's okay.\"", "CH": "\"逃跑也是有可能的。\"", "JP": "\"逃げるかもしれない。それでもいい。\""},
     "…… 그렇게 말해 주니까, 오히려 버틸 수 있을 것 같아.":
         {"EN": "...Strangely, hearing you say that makes me feel I can hold on.",
@@ -870,9 +872,9 @@ TR = {
          "CH": "我想起了吉姆。比起获胜的人，先浮现的是那些回不来的人。",
          "JP": "ジムを思い出した。勝った者より、帰れなかった者が先に浮かんだんだ。"},
     "플레이어. 고마워. 넌 내가 어떤 사람이 되어야 한다고 강요하지 않았어. 그냥 내 이야기를 들어줬잖아.":
-        {"EN": "Thank you. You never forced me to become someone. You just listened to my story.",
-         "CH": "谢谢你。你从没强迫我该成为什么样的人。你只是倾听了我的故事。",
-         "JP": "ありがとう。君は、俺がどんな人間になるべきかを押し付けなかった。ただ、俺の話を聞いてくれた。"},
+        {"EN": "Player. Thank you. You never forced me to become someone. You just listened to my story.",
+         "CH": "玩家。谢谢你。你从没强迫我该成为什么样的人。你只是倾听了我的故事。",
+         "JP": "プレイヤー。ありがとう。君は、俺がどんな人間になるべきかを押し付けなかった。ただ、俺の話を聞いてくれた。"},
     "헨리와 플레이어가 노을을 바라본다.": {"EN": "Henry and you gaze at the sunset.", "CH": "亨利与你眺望着晚霞。", "JP": "ヘンリーとあなたは夕焼けを見つめる。"},
     "덕분에 난 나 자신을, 조금은 용서할 수 있을 것 같아.":
         {"EN": "Thanks to you, I think I can forgive myself, at least a little.",
@@ -995,14 +997,32 @@ TR = {
 
 
 # ── 헬퍼 ─────────────────────────────────────────────
-def t(text):
-    """스토리 텍스트 번역. KR 또는 미등록 문자열은 원문 그대로."""
-    if text is None or current == "KR":
+def fill_player_name(text):
+    """대사·지문 속 '플레이어'를 캐릭터 이름으로 치환."""
+    if not text or not player_name:
         return text
-    e = TR.get(text)
-    if e:
-        return e.get(current, text)
+    name = player_name
+    if "플레이어" in text:
+        text = text.replace("플레이어", name)
+    # 번역문에 남는 호칭 토큰 (있을 경우)
+    for token in ("プレイヤー", "玩家"):
+        if token in text:
+            text = text.replace(token, name)
+    # EN: 'Player.' 호칭 / 'Player ' (단어 경계 비슷하게)
+    if "Player" in text:
+        text = re.sub(r"\bPlayer\b", name, text)
     return text
+
+
+def t(text):
+    """스토리 텍스트 번역. KR 또는 미등록 문자열은 원문 그대로. 플레이어명 치환 포함."""
+    if text is None:
+        return text
+    if current == "KR":
+        return fill_player_name(text)
+    e = TR.get(text)
+    out = e.get(current, text) if e else text
+    return fill_player_name(out)
 
 
 def nm(name):

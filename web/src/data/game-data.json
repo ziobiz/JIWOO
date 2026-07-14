@@ -3228,10 +3228,10 @@
     "JP": "ヘンリーとの絆"
    },
    "grp_player": {
-    "KR": "플레이어 능력치",
-    "EN": "Your Traits",
-    "CH": "玩家能力",
-    "JP": "プレイヤー能力"
+    "KR": "{name} 능력치",
+    "EN": "{name}'s Traits",
+    "CH": "{name}的能力",
+    "JP": "{name}の能力"
    },
    "grp_henry": {
     "KR": "헨리의 상태",
@@ -5359,9 +5359,9 @@
     "JP": "夜。兵士たちは眠りについた。ヘンリーだけが起きている。"
    },
    "플레이어. 나, 사실 아직도 무섭다. 다음 전투에서도 도망칠까 봐.": {
-    "EN": "You know, I'm... honestly still scared. Afraid I'll run again in the next battle.",
-    "CH": "你啊。其实我…到现在还是害怕。怕下一场仗又会逃跑。",
-    "JP": "なあ。俺、実はまだ怖いんだ。次の戦いでも逃げちまうんじゃないかって。"
+    "EN": "Player. I'm... honestly still scared. Afraid I'll run again in the next battle.",
+    "CH": "玩家。其实我…到现在还是害怕。怕下一场仗又会逃跑。",
+    "JP": "プレイヤー。俺、実はまだ怖いんだ。次の戦いでも逃げちまうんじゃないかって。"
    },
    "① \"도망칠 수도 있어.\"": {
     "EN": "\"You might run. And that's okay.\"",
@@ -5714,9 +5714,9 @@
     "JP": "ジムを思い出した。勝った者より、帰れなかった者が先に浮かんだんだ。"
    },
    "플레이어. 고마워. 넌 내가 어떤 사람이 되어야 한다고 강요하지 않았어. 그냥 내 이야기를 들어줬잖아.": {
-    "EN": "Thank you. You never forced me to become someone. You just listened to my story.",
-    "CH": "谢谢你。你从没强迫我该成为什么样的人。你只是倾听了我的故事。",
-    "JP": "ありがとう。君は、俺がどんな人間になるべきかを押し付けなかった。ただ、俺の話を聞いてくれた。"
+    "EN": "Player. Thank you. You never forced me to become someone. You just listened to my story.",
+    "CH": "玩家。谢谢你。你从没强迫我该成为什么样的人。你只是倾听了我的故事。",
+    "JP": "プレイヤー。ありがとう。君は、俺がどんな人間になるべきかを押し付けなかった。ただ、俺の話を聞いてくれた。"
    },
    "헨리와 플레이어가 노을을 바라본다.": {
     "EN": "Henry and you gaze at the sunset.",

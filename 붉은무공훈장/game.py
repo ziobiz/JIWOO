@@ -1271,7 +1271,8 @@ def draw_gauges():
             cy += 10
         accent = STAT_COLOR[keys[0]]
         pygame.draw.rect(screen, accent, (x + 14, cy + 1, 3, 16), border_radius=2)
-        screen.blit(get_font(14, bold=True).render(i18n.ui(header), True, GOLD), (x + 24, cy))
+        hdr = i18n.ui(header, name=name_txt) if header == "grp_player" else i18n.ui(header)
+        screen.blit(get_font(14, bold=True).render(hdr, True, GOLD), (x + 24, cy))
         cy += 26
         for k in keys:
             val = stats.get(k, 0)

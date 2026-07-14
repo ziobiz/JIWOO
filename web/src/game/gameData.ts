@@ -46,10 +46,38 @@ interface GameData {
 export const GAME = raw as unknown as GameData;
 
 // ── i18n 헬퍼 (Python i18n.py 이식) ──────────────────
-export function t(text: string | null, lang: Lang): string | null {
-  if (text === null || lang === "KR") return text;
-  const e = GAME.i18n.TR[text];
-  return e?.[lang] ?? text;
+/** 대사·지문 속 '플레이어'를 캐릭터 이름으로 치환. */
+export function fillPlayerName(
+  text: string | null,
+  playerName?: string,
+): string | null {
+  if (text === null || !playerName?.trim()) return text;
+  const name = playerName.trim();
+  let out = text;
+  if (out.includes("플레이어")) out = out.split("플레이어").join(name);
+  for (const token of ["プレイヤー", "玩家"]) {
+    if (out.includes(token)) out = out.split(token).join(name);
+  }
+  if (out.includes("Player")) {
+    out = out.replace(/\bPlayer\b/g, name);
+  }
+  return out;
+}
+
+export function t(
+  text: string | null,
+  lang: Lang,
+  playerName?: string,
+): string | null {
+  if (text === null) return text;
+  let out: string;
+  if (lang === "KR") {
+    out = text;
+  } else {
+    const e = GAME.i18n.TR[text];
+    out = e?.[lang] ?? text;
+  }
+  return fillPlayerName(out, playerName);
 }
 
 export function nm(

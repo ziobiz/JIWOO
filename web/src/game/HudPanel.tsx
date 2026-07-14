@@ -47,11 +47,20 @@ function StatRow({
   );
 }
 
-export function HudPanel({ lang, state }: { lang: Lang; state: GameState }) {
+export function HudPanel({
+  lang,
+  state,
+  playerName,
+}: {
+  lang: Lang;
+  state: GameState;
+  playerName: string;
+}) {
   const human = state.conflict["인간"] ?? 0;
   const soldier = state.conflict["군인"] ?? 0;
   const total = human + soldier || 1;
   const humanPct = (human / total) * 100;
+  const displayName = playerName.trim() || "플레이어";
 
   return (
     <div className="absolute top-16 right-2 z-10 w-[11.5rem] sm:top-20 sm:right-4 sm:w-56 max-h-[78dvh] overflow-y-auto rounded-xl border border-amber-900/40 bg-gradient-to-b from-black/70 to-stone-950/80 backdrop-blur-sm p-2.5 sm:p-3.5 shadow-xl scale-90 sm:scale-100 origin-top-right">
@@ -83,7 +92,9 @@ export function HudPanel({ lang, state }: { lang: Lang; state: GameState }) {
           <div className="flex items-center gap-1.5 mb-1.5">
             <span className="h-3 w-0.5 rounded bg-amber-500" />
             <p className="text-[10px] font-medium text-amber-200/90 tracking-wide">
-              {ui(g.titleKey, lang)}
+              {g.titleKey === "grp_player"
+                ? ui(g.titleKey, lang, { name: displayName })
+                : ui(g.titleKey, lang)}
             </p>
           </div>
           <div className="space-y-1.5 pl-2">
