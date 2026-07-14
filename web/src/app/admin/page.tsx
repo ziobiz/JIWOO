@@ -16,7 +16,7 @@ import {
 import { exportExcel, exportPptx, type AnalysisBundle } from "@/lib/exporters";
 import { modelInsights } from "@/lib/interpret";
 import { useBranding } from "@/lib/useBranding";
-import { ColumnChart, DonutChart, type Series, type Slice } from "./Charts";
+import { ChartBoard, type Series, type Slice } from "./Charts";
 import { QRCard } from "./QRCard";
 import { BrandCard } from "./BrandCard";
 
@@ -25,6 +25,12 @@ interface AdminReport extends AnalysisReport {
 }
 
 type ViewMode = "both" | "chart" | "table";
+type AdminPanel = "data" | "analysis" | "brand" | "qr";
+
+type DeletePending =
+  | { mode: "selected"; ids: string[]; step: 1 | 2 }
+  | { mode: "all"; step: 1 | 2 }
+  | { mode: "one"; ids: string[]; label: string; step: 1 | 2 };
 
 const CHART = {
   baseline: "#94a3b8",
@@ -142,8 +148,6 @@ function Verdict({
   );
 }
 
-/* ── 그룹별 교차분석 표 ─────────────────────────────────── */
-
 function GroupTable({
   title,
   desc,
@@ -164,7 +168,9 @@ function GroupTable({
   ];
   return (
     <Card title={title} desc={desc}>
-      {view !== "table" && <ColumnChart categories={categories} series={series} />}
+      {view !== "table" && (
+        <ChartBoard context="comparison" categories={categories} series={series} />
+      )}
       {view !== "chart" && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -211,6 +217,95 @@ function GroupTable({
   );
 }
 
+/* ── 삭제 이중 확인 모달 ─────────────────────────────────── */
+
+function DeleteConfirmModal({
+  pending,
+  busy,
+  onCancel,
+  onNext,
+  onFinal,
+}: {
+  pending: DeletePending;
+  busy: boolean;
+  onCancel: () => void;
+  onNext: () => void;
+  onFinal: () => void;
+}) {
+  const count =
+    pending.mode === "all"
+      ? "전체"
+      : pending.mode === "one"
+        ? "1"
+        : String(pending.ids.length);
+  const target =
+    pending.mode === "all"
+      ? "수집된 모든 플레이 데이터"
+      : pending.mode === "one"
+        ? `"${pending.label}" 데이터`
+        : `선택한 ${pending.ids.length}건`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 no-print">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl space-y-4">
+        <p className="text-[10px] tracking-widest text-rose-500 font-semibold">
+          {pending.step === 1 ? "1차 확인" : "2차 최종 확인"}
+        </p>
+        {pending.step === 1 ? (
+          <>
+            <h3 className="text-lg font-semibold text-slate-900">삭제할까요?</h3>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              {target}을(를) 삭제합니다. 다음 단계에서 한 번 더 확인합니다.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={onNext}
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-500"
+              >
+                다음 (2차 확인)
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className="text-lg font-semibold text-slate-900">정말 삭제합니까?</h3>
+            <p className="text-sm text-rose-700 leading-relaxed rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
+              {count === "전체" ? "모든" : `${count}건의`} 데이터가 영구 삭제되며{" "}
+              <b>되돌릴 수 없습니다</b>. 계속하려면 &quot;최종 삭제&quot;를 누르세요.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={onCancel}
+                disabled={busy}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={onFinal}
+                disabled={busy}
+                className="rounded-lg bg-rose-700 px-4 py-2 text-sm font-medium text-white hover:bg-rose-600 disabled:opacity-40"
+              >
+                {busy ? "삭제 중…" : "최종 삭제"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── 페이지 ─────────────────────────────────────────────── */
 
 export default function AdminDashboard() {
@@ -222,6 +317,8 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [view, setView] = useState<ViewMode>("both");
+  const [panel, setPanel] = useState<AdminPanel>("data");
+  const [pending, setPending] = useState<DeletePending | null>(null);
 
   const rows = useMemo(() => report?.rows ?? [], [report]);
   const grade = useMemo(() => byGrade(rows), [rows]);
@@ -232,6 +329,17 @@ export default function AdminDashboard() {
   const insights = useMemo(
     () => (report?.data ? modelInsights(report.data, report.sampleSize) : null),
     [report],
+  );
+
+  const scatterPoints = useMemo(
+    () =>
+      rows.map((r) => ({
+        x: r.courage,
+        y: r.empathy,
+        label: `${r.name} · ${r.ending}`,
+        color: endingColor(r.ending),
+      })),
+    [rows],
   );
 
   async function load() {
@@ -247,6 +355,7 @@ export default function AdminDashboard() {
       setReport(await res.json());
       setAuthed(true);
       setSelected(new Set());
+      setPanel("data");
     } catch (e) {
       setError(e instanceof Error ? e.message : "로드 실패");
       setReport(null);
@@ -293,6 +402,7 @@ export default function AdminDashboard() {
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j.error || `HTTP ${res.status}`);
+      setPending(null);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "삭제 실패");
@@ -301,19 +411,31 @@ export default function AdminDashboard() {
     }
   }
 
-  function deleteAll() {
-    if (
-      confirm(
-        "수집된 모든 플레이 데이터를 삭제합니다. 되돌릴 수 없습니다. 계속하시겠습니까?",
-      )
-    )
-      del({ all: true });
-  }
-
-  function deleteSelected() {
+  function requestDeleteSelected() {
     const ids = [...selected].filter(Boolean);
     if (!ids.length) return;
-    if (confirm(`${ids.length}건을 삭제합니다. 계속하시겠습니까?`)) del({ ids });
+    setPending({ mode: "selected", ids, step: 1 });
+  }
+
+  function requestDeleteAll() {
+    if (!rows.length) return;
+    setPending({ mode: "all", step: 1 });
+  }
+
+  function requestDeleteOne(r: PlayResult) {
+    if (!r.id) return;
+    setPending({
+      mode: "one",
+      ids: [r.id],
+      label: `${r.name || "無名"} · ${r.ending}`,
+      step: 1,
+    });
+  }
+
+  function confirmFinalDelete() {
+    if (!pending || pending.step !== 2) return;
+    if (pending.mode === "all") del({ all: true });
+    else del({ ids: pending.ids });
   }
 
   function toggle(id?: string) {
@@ -324,6 +446,14 @@ export default function AdminDashboard() {
       else next.add(id);
       return next;
     });
+  }
+
+  function toggleAll() {
+    if (selected.size === rows.filter((r) => r.id).length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(rows.map((r) => r.id).filter(Boolean) as string[]));
+    }
   }
 
   const d = report?.data;
@@ -371,29 +501,39 @@ export default function AdminDashboard() {
     );
   }
 
+  const nav: [AdminPanel, string][] = [
+    ["data", "데이터 목록"],
+    ["analysis", "분석 · 그래프"],
+    ["brand", "브랜드"],
+    ["qr", "QR 배포"],
+  ];
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 print:bg-white">
-      {/* 툴바 */}
+      {pending && (
+        <DeleteConfirmModal
+          pending={pending}
+          busy={busy === "delete"}
+          onCancel={() => setPending(null)}
+          onNext={() => setPending({ ...pending, step: 2 })}
+          onFinal={confirmFinalDelete}
+        />
+      )}
+
       <header className="no-print sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur px-6 py-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-[10px] text-amber-600 tracking-widest">ADMIN</p>
           <h1 className="text-lg font-semibold text-slate-900">학술 비교 분석 대시보드</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden mr-1">
-            {(
-              [
-                ["both", "표+그래프"],
-                ["chart", "그래프"],
-                ["table", "표"],
-              ] as [ViewMode, string][]
-            ).map(([v, lbl]) => (
+          <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden">
+            {nav.map(([p, lbl]) => (
               <button
-                key={v}
+                key={p}
                 type="button"
-                onClick={() => setView(v)}
+                onClick={() => setPanel(p)}
                 className={`px-3 py-1.5 text-sm transition-colors ${
-                  view === v
+                  panel === p
                     ? "bg-amber-600 text-white"
                     : "bg-white text-slate-600 hover:bg-slate-100"
                 }`}
@@ -402,42 +542,67 @@ export default function AdminDashboard() {
               </button>
             ))}
           </div>
-          <ToolBtn
-            onClick={() =>
-              document.getElementById("brand-section")?.scrollIntoView({ behavior: "smooth" })
-            }
-          >
-            브랜드
-          </ToolBtn>
-          <ToolBtn
-            onClick={() =>
-              document.getElementById("qr-section")?.scrollIntoView({ behavior: "smooth" })
-            }
-          >
-            QR 배포
-          </ToolBtn>
+
+          {panel === "analysis" && (
+            <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden">
+              {(
+                [
+                  ["both", "표+그래프"],
+                  ["chart", "그래프"],
+                  ["table", "표"],
+                ] as [ViewMode, string][]
+              ).map(([v, lbl]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setView(v)}
+                  className={`px-3 py-1.5 text-sm transition-colors ${
+                    view === v
+                      ? "bg-sky-600 text-white"
+                      : "bg-white text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          )}
+
           <ToolBtn onClick={() => window.print()}>PDF / 인쇄</ToolBtn>
-          <ToolBtn onClick={doExcel} disabled={busy === "excel"}>
+          <ToolBtn onClick={doExcel} disabled={busy === "excel" || !d}>
             {busy === "excel" ? "생성 중…" : "Excel 내보내기"}
           </ToolBtn>
-          <ToolBtn onClick={doPptx} disabled={busy === "pptx"}>
+          <ToolBtn onClick={doPptx} disabled={busy === "pptx" || !d}>
             {busy === "pptx" ? "생성 중…" : "발표자료(PPT)"}
           </ToolBtn>
           <ToolBtn onClick={load} disabled={loading}>
             {loading ? "새로고침 중…" : "새로고침"}
           </ToolBtn>
-          <ToolBtn onClick={deleteSelected} disabled={busy === "delete" || selected.size === 0} danger>
-            선택 삭제 ({selected.size})
-          </ToolBtn>
-          <ToolBtn onClick={deleteAll} disabled={busy === "delete"} danger>
-            전체 삭제
-          </ToolBtn>
+          {panel === "data" && (
+            <>
+              <ToolBtn
+                onClick={requestDeleteSelected}
+                disabled={busy === "delete" || selected.size === 0}
+                danger
+              >
+                선택 삭제 ({selected.size})
+              </ToolBtn>
+              <ToolBtn
+                onClick={requestDeleteAll}
+                disabled={busy === "delete" || rows.length === 0}
+                danger
+              >
+                전체 삭제
+              </ToolBtn>
+            </>
+          )}
           <button
             type="button"
             onClick={() => {
               setAuthed(false);
               setReport(null);
               setSecret("");
+              setPanel("data");
             }}
             className="text-sm text-slate-400 hover:text-rose-500 px-2"
           >
@@ -458,158 +623,42 @@ export default function AdminDashboard() {
             {error}
           </p>
         )}
-        {rows.length === 0 && (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-            아직 수집된 플레이 데이터가 없습니다. 게임을 완료하면 결과가 이곳에 집계됩니다.
-          </p>
-        )}
 
-        <div id="brand-section" className="scroll-mt-20">
-          <BrandCard secret={secret} />
-        </div>
-
-        <div id="qr-section" className="scroll-mt-20">
-          <QRCard />
-        </div>
-
-        {d && (
+        {/* ── 데이터 목록 (첫 화면) ── */}
+        {panel === "data" && (
           <>
-            {/* 요약 */}
-            <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <StatBox label="표본 n" value={String(report!.sampleSize)} />
-              <StatBox label="진엔딩 비율" value={`${d.goodEndingPct}%`} />
-              <StatBox label="공감(Q1 B)" value={`${d.model1.empathyPct}%`} />
-              <StatBox label="이타심(Q3 B)" value={`${d.model3.altruismPct}%`} />
-            </section>
-
-            {/* 엔딩 분포 */}
-            {d.endingDistribution.length > 0 && (
-              <Card title="엔딩 분포">
-                {view !== "table" && (
-                  <DonutChart
-                    data={d.endingDistribution.map<Slice>((e) => ({
-                      label: e.code,
-                      value: e.count,
-                      color: endingColor(e.code),
-                    }))}
-                  />
-                )}
-                {view !== "chart" &&
-                  d.endingDistribution.map((e) => (
-                    <Bar
-                      key={e.code}
-                      label={`${e.code} (${e.count}건)`}
-                      value={e.pct}
-                      color={
-                        ["TRUE", "GOOD", "HIDDEN"].includes(e.code)
-                          ? "bg-emerald-600"
-                          : e.code === "BAD"
-                            ? "bg-rose-500"
-                            : "bg-amber-500"
-                      }
-                    />
-                  ))}
-              </Card>
+            {d && (
+              <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <StatBox label="표본 n" value={String(report!.sampleSize)} />
+                <StatBox label="진엔딩 비율" value={`${d.goodEndingPct}%`} />
+                <StatBox label="공감(Q1 B)" value={`${d.model1.empathyPct}%`} />
+                <StatBox label="이타심(Q3 B)" value={`${d.model3.altruismPct}%`} />
+              </section>
             )}
 
-            {/* 3대 모델 비교 */}
-            <Card
-              title="① 콜버그 · 길리건 — 원칙 vs 공감"
-              desc="사전 설문 Q1 · 게임 내 '갈등의 저울'(군인 vs 인간)"
-            >
-              <Verdict
-                baseline={BASELINE.model1Principle}
-                ours={d.model1.principlePct}
-                label="원칙(A) 비율"
-                higherIsBaseline
-              />
-              {view !== "table" && (
-                <ColumnChart
-                  categories={["원칙(A)", "공감(B)"]}
-                  series={[
-                    { name: "기존 통계", color: CHART.baseline, values: [BASELINE.model1Principle, 100 - BASELINE.model1Principle] },
-                    { name: "우리 데이터", color: CHART.ours, values: [d.model1.principlePct, d.model1.empathyPct] },
-                  ]}
-                />
-              )}
-              {view !== "chart" && (
-                <>
-                  <Bar label={`기존 통계 · 규칙 우선 ≈ ${BASELINE.model1Principle}%`} value={BASELINE.model1Principle} color="bg-slate-400" />
-                  <Bar label={`우리 데이터 · 원칙(A) n=${d.model1.n}`} value={d.model1.principlePct} color="bg-sky-600" />
-                  <Bar label="우리 데이터 · 공감(B)" value={d.model1.empathyPct} color="bg-emerald-600" />
-                </>
-              )}
-              <p className="text-xs text-slate-500">평균 저울 — 인간 {d.model1.avgHuman} · 군인 {d.model1.avgSoldier}</p>
-              <Hypothesis text={REFERENCE.model1.hypothesis} />
-              {insights && <Analysis result={insights.m1.result} meaning={insights.m1.meaning} />}
-              <Source>{REFERENCE.model1.baselines[0].source}</Source>
-            </Card>
-
-            <Card title="② MBTI 사고형(T) vs 감정형(F) — 엔딩 · 용기" desc="MBTI 3번째 지표(T/F) · 도달 엔딩 · 용기 스탯">
-              {view !== "table" && (
-                <ColumnChart
-                  categories={["T형", "F형"]}
-                  series={[
-                    { name: "진엔딩%", color: CHART.good, values: [d.model2.tGoodEndingPct, d.model2.fGoodEndingPct] },
-                    { name: "평균 용기", color: CHART.ours, values: [d.model2.tAvgCourage, d.model2.fAvgCourage] },
-                  ]}
-                />
-              )}
-              {view !== "chart" && (
-                <>
-                  <Bar label={`기존 · 남성 T선호 ${BASELINE.model2MaleT}%`} value={BASELINE.model2MaleT} color="bg-slate-400" />
-                  <Bar label={`우리 · T형 진엔딩 (n=${d.model2.tN})`} value={d.model2.tGoodEndingPct} color="bg-sky-600" />
-                  <Bar label={`우리 · F형 진엔딩 (n=${d.model2.fN})`} value={d.model2.fGoodEndingPct} color="bg-emerald-600" />
-                </>
-              )}
-              <p className="text-xs text-slate-500">T형 평균 용기 {d.model2.tAvgCourage} · F형 평균 용기 {d.model2.fAvgCourage}</p>
-              <Hypothesis text={REFERENCE.model2.hypothesis} />
-              {insights && <Analysis result={insights.m2.result} meaning={insights.m2.meaning} />}
-              <Source>{REFERENCE.model2.baselines[0].source}</Source>
-            </Card>
-
-            <Card title="③ 트롤리 · 행동경제학 — 이기심 vs 이타심" desc="사전 설문 Q3 · 인간본능 vs 공감 · 기억 조각">
-              <Verdict
-                baseline={BASELINE.model3Dictator}
-                ours={d.model3.altruismPct}
-                label="이타심(B) 비율"
-                higherIsBaseline={false}
-              />
-              {view !== "table" && (
-                <ColumnChart
-                  categories={["이기심(A)", "이타심(B)"]}
-                  series={[
-                    { name: "기존 통계", color: CHART.baseline, values: [100 - BASELINE.model3Dictator, BASELINE.model3Dictator] },
-                    { name: "우리 데이터", color: CHART.ours, values: [d.model3.selfPct, d.model3.altruismPct] },
-                  ]}
-                />
-              )}
-              {view !== "chart" && (
-                <>
-                  <Bar label={`기존 · 독재자 게임 양보 ${BASELINE.model3Dictator}%`} value={BASELINE.model3Dictator} color="bg-slate-400" />
-                  <Bar label={`우리 · 이기심(A) n=${d.model3.n}`} value={d.model3.selfPct} color="bg-orange-500" />
-                  <Bar label="우리 · 이타심(B)" value={d.model3.altruismPct} color="bg-emerald-600" />
-                </>
-              )}
-              <p className="text-xs text-slate-500">평균 인간본능 {d.model3.avgInstinct} · 공감 {d.model3.avgEmpathy} · 기억조각 {d.model3.avgFragments}</p>
-              <Hypothesis text={REFERENCE.model3.hypothesis} />
-              {insights && <Analysis result={insights.m3.result} meaning={insights.m3.meaning} />}
-              <Source>{REFERENCE.model3.baselines[2].source}</Source>
-            </Card>
-
-            {/* 그룹별 교차분석 */}
-            <h2 className="pt-2 text-sm font-semibold tracking-widest text-slate-400">그룹별 교차분석</h2>
-            <GroupTable title="학년별" stats={grade} view={view} />
-            <GroupTable title="성별" stats={gender} view={view} />
-            <GroupTable title="전공별" stats={major} view={view} />
-            <GroupTable title="MBTI 사고형(T) vs 감정형(F)" stats={mbtiTF} view={view} />
-            {mbtiType.length > 0 && (
-              <GroupTable title="MBTI 유형별" desc="데이터가 있는 유형만 표본순으로 표시" stats={mbtiType} view={view} />
-            )}
-
-            {/* 원자료 + 삭제 */}
-            {rows.length > 0 && (
-              <Card title={`원자료 (${rows.length}건)`} desc="체크 후 '선택 삭제', 또는 툴바의 '전체 삭제'로 테스트 데이터를 정리하세요.">
+            {rows.length === 0 ? (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                아직 수집된 플레이 데이터가 없습니다. 게임을 완료하면 결과가 이곳에 집계됩니다.
+              </p>
+            ) : (
+              <Card
+                title={`수집된 데이터 목록 (${rows.length}건)`}
+                desc="체크 후 '선택 삭제', 행의 '삭제', 또는 '전체 삭제'로 정리합니다. 삭제는 이중 확인 후 실행됩니다."
+              >
+                <div className="no-print flex flex-wrap gap-2 mb-3">
+                  <ToolBtn onClick={toggleAll}>
+                    {selected.size === rows.filter((r) => r.id).length
+                      ? "전체 선택 해제"
+                      : "전체 선택"}
+                  </ToolBtn>
+                  <ToolBtn
+                    onClick={requestDeleteSelected}
+                    disabled={selected.size === 0}
+                    danger
+                  >
+                    선택 삭제 ({selected.size})
+                  </ToolBtn>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-left">
                     <thead>
@@ -627,7 +676,8 @@ export default function AdminDashboard() {
                         <th className="py-2 pr-3">용기</th>
                         <th className="py-2 pr-3">공감</th>
                         <th className="py-2 pr-3">조각</th>
-                        <th className="py-2">일치</th>
+                        <th className="py-2 pr-3">일치</th>
+                        <th className="py-2 no-print">삭제</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -642,7 +692,9 @@ export default function AdminDashboard() {
                             />
                           </td>
                           <td className="py-1.5 pr-3 whitespace-nowrap">
-                            {r.created_at ? new Date(r.created_at).toLocaleString("ko-KR") : "-"}
+                            {r.created_at
+                              ? new Date(r.created_at).toLocaleString("ko-KR")
+                              : "-"}
                           </td>
                           <td className="py-1.5 pr-3">{r.name}</td>
                           <td className="py-1.5 pr-3">{label(r.gender)}</td>
@@ -671,7 +723,17 @@ export default function AdminDashboard() {
                           <td className="py-1.5 pr-3">{r.courage}</td>
                           <td className="py-1.5 pr-3">{r.empathy}</td>
                           <td className="py-1.5 pr-3">{r.fragments}</td>
-                          <td className="py-1.5">{r.matches}/3</td>
+                          <td className="py-1.5 pr-3">{r.matches}/3</td>
+                          <td className="py-1.5 no-print">
+                            <button
+                              type="button"
+                              disabled={!r.id || busy === "delete"}
+                              onClick={() => requestDeleteOne(r)}
+                              className="rounded border border-rose-200 px-2 py-0.5 text-[11px] text-rose-600 hover:bg-rose-50 disabled:opacity-40"
+                            >
+                              삭제
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -679,8 +741,272 @@ export default function AdminDashboard() {
                 </div>
               </Card>
             )}
+          </>
+        )}
 
-            {/* 참고문헌 */}
+        {/* ── 분석 · 그래프 ── */}
+        {panel === "analysis" && d && (
+          <>
+            <p className="text-xs text-slate-500 rounded-lg border border-slate-200 bg-white px-4 py-2">
+              지원 도식:{" "}
+              <b>막대 그래프 (Bar Chart)</b> · <b>꺾은선 그래프 (Line Graph)</b> ·{" "}
+              <b>원 그래프 (Pie Chart)</b> · <b>산점도 (Scatter Plot)</b>. 각 도식
+              하단에서 데이터에 적합한 추천 2가지를 안내합니다.
+            </p>
+
+            <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <StatBox label="표본 n" value={String(report!.sampleSize)} />
+              <StatBox label="진엔딩 비율" value={`${d.goodEndingPct}%`} />
+              <StatBox label="공감(Q1 B)" value={`${d.model1.empathyPct}%`} />
+              <StatBox label="이타심(Q3 B)" value={`${d.model3.altruismPct}%`} />
+            </section>
+
+            {d.endingDistribution.length > 0 && (
+              <Card title="엔딩 분포">
+                {view !== "table" && (
+                  <ChartBoard
+                    context="composition"
+                    categories={d.endingDistribution.map((e) => e.code)}
+                    series={[
+                      {
+                        name: "건수",
+                        color: CHART.ours,
+                        values: d.endingDistribution.map((e) => e.count),
+                      },
+                    ]}
+                    slices={d.endingDistribution.map<Slice>((e) => ({
+                      label: e.code,
+                      value: e.count,
+                      color: endingColor(e.code),
+                    }))}
+                    unit="건"
+                  />
+                )}
+                {view !== "chart" &&
+                  d.endingDistribution.map((e) => (
+                    <Bar
+                      key={e.code}
+                      label={`${e.code} (${e.count}건)`}
+                      value={e.pct}
+                      color={
+                        ["TRUE", "GOOD", "HIDDEN"].includes(e.code)
+                          ? "bg-emerald-600"
+                          : e.code === "BAD"
+                            ? "bg-rose-500"
+                            : "bg-amber-500"
+                      }
+                    />
+                  ))}
+              </Card>
+            )}
+
+            {scatterPoints.length > 0 && view !== "table" && (
+              <Card
+                title="산점도 · 용기 vs 공감"
+                desc="개별 플레이어의 용기(X)–공감(Y) 분포. 색은 엔딩 코드."
+              >
+                <ChartBoard
+                  context="correlation"
+                  categories={["용기→공감"]}
+                  series={[
+                    {
+                      name: "공감",
+                      color: CHART.ours,
+                      values: scatterPoints.map((p) => p.y),
+                    },
+                  ]}
+                  scatter={{
+                    points: scatterPoints,
+                    xLabel: "용기",
+                    yLabel: "공감",
+                  }}
+                  unit=""
+                />
+              </Card>
+            )}
+
+            <Card
+              title="① 콜버그 · 길리건 — 원칙 vs 공감"
+              desc="사전 설문 Q1 · 게임 내 '갈등의 저울'(군인 vs 인간)"
+            >
+              <Verdict
+                baseline={BASELINE.model1Principle}
+                ours={d.model1.principlePct}
+                label="원칙(A) 비율"
+                higherIsBaseline
+              />
+              {view !== "table" && (
+                <ChartBoard
+                  context="comparison"
+                  categories={["원칙(A)", "공감(B)"]}
+                  series={[
+                    {
+                      name: "기존 통계",
+                      color: CHART.baseline,
+                      values: [BASELINE.model1Principle, 100 - BASELINE.model1Principle],
+                    },
+                    {
+                      name: "우리 데이터",
+                      color: CHART.ours,
+                      values: [d.model1.principlePct, d.model1.empathyPct],
+                    },
+                  ]}
+                />
+              )}
+              {view !== "chart" && (
+                <>
+                  <Bar
+                    label={`기존 통계 · 규칙 우선 ≈ ${BASELINE.model1Principle}%`}
+                    value={BASELINE.model1Principle}
+                    color="bg-slate-400"
+                  />
+                  <Bar
+                    label={`우리 데이터 · 원칙(A) n=${d.model1.n}`}
+                    value={d.model1.principlePct}
+                    color="bg-sky-600"
+                  />
+                  <Bar
+                    label="우리 데이터 · 공감(B)"
+                    value={d.model1.empathyPct}
+                    color="bg-emerald-600"
+                  />
+                </>
+              )}
+              <p className="text-xs text-slate-500">
+                평균 저울 — 인간 {d.model1.avgHuman} · 군인 {d.model1.avgSoldier}
+              </p>
+              <Hypothesis text={REFERENCE.model1.hypothesis} />
+              {insights && (
+                <Analysis result={insights.m1.result} meaning={insights.m1.meaning} />
+              )}
+              <Source>{REFERENCE.model1.baselines[0].source}</Source>
+            </Card>
+
+            <Card
+              title="② MBTI 사고형(T) vs 감정형(F) — 엔딩 · 용기"
+              desc="MBTI 3번째 지표(T/F) · 도달 엔딩 · 용기 스탯"
+            >
+              {view !== "table" && (
+                <ChartBoard
+                  context="comparison"
+                  categories={["T형", "F형"]}
+                  series={[
+                    {
+                      name: "진엔딩%",
+                      color: CHART.good,
+                      values: [d.model2.tGoodEndingPct, d.model2.fGoodEndingPct],
+                    },
+                    {
+                      name: "평균 용기",
+                      color: CHART.ours,
+                      values: [d.model2.tAvgCourage, d.model2.fAvgCourage],
+                    },
+                  ]}
+                />
+              )}
+              {view !== "chart" && (
+                <>
+                  <Bar
+                    label={`기존 · 남성 T선호 ${BASELINE.model2MaleT}%`}
+                    value={BASELINE.model2MaleT}
+                    color="bg-slate-400"
+                  />
+                  <Bar
+                    label={`우리 · T형 진엔딩 (n=${d.model2.tN})`}
+                    value={d.model2.tGoodEndingPct}
+                    color="bg-sky-600"
+                  />
+                  <Bar
+                    label={`우리 · F형 진엔딩 (n=${d.model2.fN})`}
+                    value={d.model2.fGoodEndingPct}
+                    color="bg-emerald-600"
+                  />
+                </>
+              )}
+              <p className="text-xs text-slate-500">
+                T형 평균 용기 {d.model2.tAvgCourage} · F형 평균 용기 {d.model2.fAvgCourage}
+              </p>
+              <Hypothesis text={REFERENCE.model2.hypothesis} />
+              {insights && (
+                <Analysis result={insights.m2.result} meaning={insights.m2.meaning} />
+              )}
+              <Source>{REFERENCE.model2.baselines[0].source}</Source>
+            </Card>
+
+            <Card
+              title="③ 트롤리 · 행동경제학 — 이기심 vs 이타심"
+              desc="사전 설문 Q3 · 인간본능 vs 공감 · 기억 조각"
+            >
+              <Verdict
+                baseline={BASELINE.model3Dictator}
+                ours={d.model3.altruismPct}
+                label="이타심(B) 비율"
+                higherIsBaseline={false}
+              />
+              {view !== "table" && (
+                <ChartBoard
+                  context="composition"
+                  categories={["이기심(A)", "이타심(B)"]}
+                  series={[
+                    {
+                      name: "기존 통계",
+                      color: CHART.baseline,
+                      values: [100 - BASELINE.model3Dictator, BASELINE.model3Dictator],
+                    },
+                    {
+                      name: "우리 데이터",
+                      color: CHART.ours,
+                      values: [d.model3.selfPct, d.model3.altruismPct],
+                    },
+                  ]}
+                />
+              )}
+              {view !== "chart" && (
+                <>
+                  <Bar
+                    label={`기존 · 독재자 게임 양보 ${BASELINE.model3Dictator}%`}
+                    value={BASELINE.model3Dictator}
+                    color="bg-slate-400"
+                  />
+                  <Bar
+                    label={`우리 · 이기심(A) n=${d.model3.n}`}
+                    value={d.model3.selfPct}
+                    color="bg-orange-500"
+                  />
+                  <Bar
+                    label="우리 · 이타심(B)"
+                    value={d.model3.altruismPct}
+                    color="bg-emerald-600"
+                  />
+                </>
+              )}
+              <p className="text-xs text-slate-500">
+                평균 인간본능 {d.model3.avgInstinct} · 공감 {d.model3.avgEmpathy} · 기억조각{" "}
+                {d.model3.avgFragments}
+              </p>
+              <Hypothesis text={REFERENCE.model3.hypothesis} />
+              {insights && (
+                <Analysis result={insights.m3.result} meaning={insights.m3.meaning} />
+              )}
+              <Source>{REFERENCE.model3.baselines[2].source}</Source>
+            </Card>
+
+            <h2 className="pt-2 text-sm font-semibold tracking-widest text-slate-400">
+              그룹별 교차분석
+            </h2>
+            <GroupTable title="학년별" stats={grade} view={view} />
+            <GroupTable title="성별" stats={gender} view={view} />
+            <GroupTable title="전공별" stats={major} view={view} />
+            <GroupTable title="MBTI 사고형(T) vs 감정형(F)" stats={mbtiTF} view={view} />
+            {mbtiType.length > 0 && (
+              <GroupTable
+                title="MBTI 유형별"
+                desc="데이터가 있는 유형만 표본순으로 표시"
+                stats={mbtiType}
+                view={view}
+              />
+            )}
+
             <Card title="참고문헌">
               <ul className="space-y-2 text-xs text-slate-500">
                 {Object.values(REFERENCE).flatMap((m) =>
@@ -694,6 +1020,16 @@ export default function AdminDashboard() {
             </Card>
           </>
         )}
+
+        {panel === "analysis" && !d && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            분석할 데이터가 없습니다. 게임을 완료하면 그래프·교차분석이 여기에 표시됩니다.
+          </p>
+        )}
+
+        {/* ── 브랜드 / QR — 메뉴 선택 시에만 ── */}
+        {panel === "brand" && <BrandCard secret={secret} />}
+        {panel === "qr" && <QRCard />}
       </main>
       <CreditsFooter light />
     </div>
@@ -738,7 +1074,6 @@ function Hypothesis({ text }: { text: string }) {
   );
 }
 
-/** 가설 아래 — 누적 데이터 기반 분석 결과 + 해석 */
 function Analysis({ result, meaning }: { result: string; meaning: string }) {
   return (
     <>
