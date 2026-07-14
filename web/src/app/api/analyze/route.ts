@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildReport } from "@/lib/analyze";
-import { getSupabaseAdmin, getSupabaseConfigError, rowToPlayResult } from "@/lib/supabase";
+import { getSupabaseAdmin, getSupabaseConfigError, getSupabaseEnvStatus, rowToPlayResult } from "@/lib/supabase";
 import type { PlayResult } from "@/types/game";
 import fs from "fs";
 import path from "path";
@@ -91,8 +91,10 @@ export async function GET(request: Request) {
     }
 
     const report = buildReport(rows, source);
+    const envStatus = getSupabaseEnvStatus();
     return NextResponse.json({
       ...report,
+      envStatus,
       // 전체 원자료 — 클라이언트에서 학년/성별/전공/MBTI 교차분석 및 내보내기에 사용
       rows,
       recentPlays: rows.slice(0, 100).map((r) => ({

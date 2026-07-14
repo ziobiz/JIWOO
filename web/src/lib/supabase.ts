@@ -47,24 +47,62 @@ function readUrlAndKey(
 ): { url: string; key: string } | null {
   const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const rawKey = process.env[keyEnv];
+  const urlPresent = Boolean(rawUrl != null && String(rawUrl).length > 0);
+  const keyPresent = Boolean(rawKey != null && String(rawKey).length > 0);
   const url = normalizeSupabaseUrl(rawUrl);
   const key = (rawKey ?? "").trim().replace(/^["']|["']$/g, "");
 
-  if (!rawUrl?.trim() && !rawKey?.trim()) {
-    _configError = null; // 완전 미설정 — 일반 폴백
+  // 완전 미설정
+  if (!urlPresent && !keyPresent) {
+    _configError = null;
+    return null;
+  }
+  // Vercel에 키 이름만 있고 Value 가 빈 문자열인 경우가 가장 흔함
+  if (urlPresent && !String(rawUrl).trim()) {
+    _configError =
+      "NEXT_PUBLIC_SUPABASE_URL 이 등록돼 있지만 값이 비어 있습니다. Vercel → Settings → Environment Variables 에서 기존 항목을 삭제한 뒤 https://xxxx.supabase.co 형식으로 다시 추가하세요.";
     return null;
   }
   if (!url) {
     _configError =
-      "NEXT_PUBLIC_SUPABASE_URL 이 비어 있거나 올바른 http(s) 주소가 아닙니다. Vercel → Settings → Environment Variables 에서 https://xxxx.supabase.co 형식으로 다시 저장하세요.";
+      "NEXT_PUBLIC_SUPABASE_URL 형식이 올바르지 않습니다. https://xxxx.supabase.co 전체 주소로 다시 저장하세요.";
+    return null;
+  }
+  if (keyPresent && !key) {
+    _configError = `${keyEnv} 이 등록돼 있지만 값이 비어 있습니다. Vercel에서 삭제 후 키를 다시 붙여넣으세요.`;
     return null;
   }
   if (!key) {
-    _configError = `${keyEnv} 값이 비어 있습니다. Vercel 환경변수에 키를 다시 입력하세요.`;
+    _configError = `${keyEnv} 값이 없습니다. Vercel 환경변수에 키를 입력하세요.`;
     return null;
   }
   _configError = null;
   return { url, key };
+}
+
+/** 관리자 진단용 — 값은 노출하지 않고 설정 여부만 */
+export function getSupabaseEnvStatus(): {
+  url: boolean;
+  anonKey: boolean;
+  serviceRole: boolean;
+  adminSecret: boolean;
+  configured: boolean;
+  error: string | null;
+} {
+  const url = Boolean(normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL));
+  const anonKey = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim());
+  const serviceRole = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+  const adminSecret = Boolean(process.env.ADMIN_SECRET?.trim());
+  // 상태 갱신
+  getSupabaseAdmin();
+  return {
+    url,
+    anonKey,
+    serviceRole,
+    adminSecret,
+    configured: url && anonKey && serviceRole,
+    error: getSupabaseConfigError(),
+  };
 }
 
 /** 서버 전용 — service role (관리자 API) */

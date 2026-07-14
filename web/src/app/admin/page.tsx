@@ -22,6 +22,14 @@ import { BrandCard } from "./BrandCard";
 
 interface AdminReport extends AnalysisReport {
   rows?: PlayResult[];
+  envStatus?: {
+    url: boolean;
+    anonKey: boolean;
+    serviceRole: boolean;
+    adminSecret: boolean;
+    configured: boolean;
+    error: string | null;
+  };
 }
 
 type ViewMode = "both" | "chart" | "table";
@@ -617,6 +625,34 @@ export default function AdminDashboard() {
             데이터: {report.source} · 표본 n = {report.sampleSize} ·{" "}
             {new Date(report.generatedAt).toLocaleString("ko-KR")}
           </p>
+        )}
+        {report?.envStatus && !report.envStatus.configured && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 space-y-2">
+            <p className="font-medium">플레이 결과가 DB에 저장되지 않고 있습니다</p>
+            <p className="text-amber-900/90 text-xs leading-relaxed">
+              원인: Vercel 환경변수에 Supabase URL/키가 <strong>없거나 값이 비어</strong> 있습니다.
+              {report.envStatus.error ? ` (${report.envStatus.error})` : ""}
+            </p>
+            <ul className="text-xs text-amber-900/80 list-disc pl-4 space-y-1">
+              <li>
+                상태 — URL {report.envStatus.url ? "OK" : "없음"} · anon{" "}
+                {report.envStatus.anonKey ? "OK" : "없음"} · service_role{" "}
+                {report.envStatus.serviceRole ? "OK" : "없음"} · ADMIN_SECRET{" "}
+                {report.envStatus.adminSecret ? "OK" : "없음"}
+              </li>
+              <li>
+                Supabase → Project Settings → API 에서 Project URL, anon, service_role 복사
+              </li>
+              <li>
+                Vercel → twc → Settings → Environment Variables 에 4개 다시 저장 후{" "}
+                <strong>Redeploy</strong>
+              </li>
+              <li>
+                또는 로컬 <code className="bg-amber-100 px-1 rounded">web/.env.local</code> 작성 후{" "}
+                <code className="bg-amber-100 px-1 rounded">node scripts/push-env-vercel.mjs</code>
+              </li>
+            </ul>
+          </div>
         )}
         {error && (
           <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">
