@@ -3690,10 +3690,10 @@
     "JP": "事情を聞いて手直しの時間を与える。今回だけ見逃す。"
    },
    "q1v3_t": {
-    "KR": "편의점에서 아르바이트를 하고 있습니다. 평소 폐점을 도와주던 단골이 거스름돈 천 원이 부족합니다. 계산대 규정은 정확히 받아야 합니다. 당신의 선택은?",
+    "KR": "편의점 알바입니다. 평소 폐점 도와주던 단골이 거스름돈 천 원이 부족합니다. 계산대 규정은 정확히 받아야 합니다. 당신의 선택은?",
     "EN": "You're working at a convenience store. A regular who often helps lock up is short ₩1,000. Policy says charge the exact amount. Your choice?",
     "CH": "你在便利店兼职。常帮你打烊的熟客少带一千韩元。规定必须足额收款。你的选择是？",
-    "JP": "コンビニでアルバイトをしています。いつも閉店を手伝ってくれる常連が千円足りません。規定では正確に受け取るべきです。あなたの選択は？"
+    "JP": "コンビニのバイト。いつも閉店を手伝ってくれる常連が千円足りません。規定では正確に受け取るべきです。あなたの選択は？"
    },
    "q1v3_a": {
     "KR": "규정대로 부족한 금액을 정확히 받는다.",
@@ -3726,10 +3726,10 @@
     "JP": "友人の努力を酌量し、今回だけ受け付ける。"
    },
    "q1v5_t": {
-    "KR": "기숙사 소등·정숙 시간입니다. 오늘 하루가 힘들었던 같은 방 친구가 음악을 틀고 있습니다. 기숙사 사감으로서 경고를 해야 합니다. 당신의 선택은?",
-    "EN": "It's dorm quiet hours. Your roommate, after a brutal day, is playing music. As the dorm supervisor you should warn them. Your choice?",
-    "CH": "宿舍已到熄灯与安静时间。经历艰难一天的室友在放音乐。作为宿舍管理员，你应警告。你的选择是？",
-    "JP": "寮の消灯・静粛時間です。つらい一日を過ごしたルームメイトが音楽をかけています。寮の指導員として注意すべきです。あなたの選択は？"
+    "KR": "기숙사 소등·정숙 시간입니다. 오늘 하루가 힘들었던 학생이 음악을 틀고 있습니다. 기숙사 사감으로서 경고를 해야 합니다. 당신의 선택은?",
+    "EN": "It's dorm quiet hours. A student who had a hard day is playing music. As the dorm supervisor you should warn them. Your choice?",
+    "CH": "宿舍已到熄灯与安静时间。经历艰难一天的学生在放音乐。作为宿舍管理员，你应警告。你的选择是？",
+    "JP": "寮の消灯・静粛時間です。つらい一日を過ごした生徒が音楽をかけています。寮監として注意すべきです。あなたの選択は？"
    },
    "q1v5_a": {
     "KR": "규칙이니 정숙을 요청하고 음악을 끄게 한다.",
@@ -3762,10 +3762,10 @@
     "JP": "静かに隠し、称賛と評判を保つ。"
    },
    "q2v2_t": {
-    "KR": "실험 보고서에서 당신이 시약을 잘못 섞었고, 그 결과로 좋은 성적을 받았습니다. 당신만 알고 있습니다. 당신의 선택은?",
-    "EN": "In a lab report you mixed the wrong reagent and still got a high mark. Only you know. Your choice?",
-    "CH": "实验报告里你混错了试剂，却因此拿了高分。只有你知道。你的选择是？",
-    "JP": "実験レポートで試薬を混ぜ間違え、その結果良い成績を取りました。知っているのはあなただけです。あなたの選択は？"
+    "KR": "실험 보고서에서 당신이 시약을 잘못 섞었고, 그 결과로 A를 받았습니다. 당신만 알고 있습니다. 당신의 선택은?",
+    "EN": "In a lab report you mixed the wrong reagent and still got an A. Only you know. Your choice?",
+    "CH": "实验报告里你混错了试剂，却因此得了 A。只有你知道。你的选择是？",
+    "JP": "実験レポートで試薬を混ぜ間違え、その結果Aを取りました。知っているのはあなただけです。あなたの選択は？"
    },
    "q2v2_a": {
     "KR": "교수에게 오류를 알리고 점수를 재평가받는다.",
@@ -3786,10 +3786,10 @@
     "JP": "試合中、相手を軽くつまづかせたが主審は見ていません。黙っていればチームが勝てそうです。あなたの選択は？"
    },
    "q2v3_a": {
-    "KR": "스스로 손을 들고 반칙을 인정한다.",
+    "KR": "스스로 손을 들고 파울을 인정한다.",
     "EN": "Raise your hand and admit the foul.",
     "CH": "主动举手承认犯规。",
-    "JP": "自ら手を挙げて反則を認める。"
+    "JP": "自ら手を挙げてファウルを認める。"
    },
    "q2v3_b": {
     "KR": "들키지 않았으니 경기에 집중해 승리를 지킨다.",
@@ -3816,10 +3816,10 @@
     "JP": "もう広まったことだから、静かに通り過ぎさせる。"
    },
    "q2v5_t": {
-    "KR": "코딩 대회에서 금지된 인공지능을 몰래 썼고, 당신만 압니다. 순위를 지킬 수 있습니다. 당신의 선택은?",
+    "KR": "코딩 대회에서 금지된 AI를 몰래 썼고, 당신만 압니다. 순위를 지킬 수 있습니다. 당신의 선택은?",
     "EN": "In a coding contest you secretly used banned AI help; only you know. You can keep your rank. Your choice?",
-    "CH": "编程比赛中你偷偷用了禁用的人工智能，只有你知道。可以保住名次。你的选择是？",
-    "JP": "プログラミング大会で禁止されている人工知能をこっそり使い、知っているのは自分だけ。順位を守れます。あなたの選択は？"
+    "CH": "编程比赛中你偷偷用了禁用的 AI，只有你知道。可以保住名次。你的选择是？",
+    "JP": "コーディング大会で禁止のAIをこっそり使い、知っているのは自分だけ。順位を守れます。あなたの選択は？"
    },
    "q2v5_a": {
     "KR": "부정임을 고백하고 순위에서 내려온다.",
@@ -3852,7 +3852,7 @@
     "JP": "成績が下がる覚悟でも、友人の話を最後まで聞く。"
    },
    "q3v2_t": {
-    "KR": "인턴 추천 자리가 하나뿐입니다. 지도교수는 당신과, 형편이 더 절실한 친구 중 하나만 추천할 수 있습니다. 당신의 선택은?",
+    "KR": "인턴십 추천 자리가 하나뿐입니다. 지도교수는 당신과, 형편이 더 절실한 친구 중 하나만 추천할 수 있습니다. 당신의 선택은?",
     "EN": "Only one internship recommendation slot. Your advisor can recommend either you or a friend who needs it more. Your choice?",
     "CH": "实习推荐名额只有一个。导师只能推荐你，或更急需的朋友。你的选择是？",
     "JP": "インターン推薦枠は一つだけ。指導教員はあなたか、より切実な友人のどちらか一人です。あなたの選択は？"
@@ -3871,7 +3871,7 @@
    },
    "q3v3_t": {
     "KR": "내일 중요한 면접이 있어 쉬려던 밤, 응급실 자원봉사 마지막 자리가 비었습니다. 지금 가면 잠을 못 잡니다. 당신의 선택은?",
-    "EN": "The night before a big interview you planned to rest, but the last emergency-room volunteer slot opens. Going means no sleep. Your choice?",
+    "EN": "The night before a big interview you planned to rest, but the last ER volunteer slot opens. Going means no sleep. Your choice?",
     "CH": "明天有重要面试你原打算休息，急诊志愿最后一席空了。去了就睡不好。你的选择是？",
     "JP": "明日の大事な面接のため休むつもりだった夜、救急ボランティアの最後の枠が空きました。行けば眠れません。あなたの選択は？"
    },
@@ -3888,16 +3888,16 @@
     "JP": "面接が危うくてもボランティアに行く。"
    },
    "q3v4_t": {
-    "KR": "중간고사 직전, 열람실 컴퓨터가 두 시간만 남았습니다. 당신은 복습이 필요하고, 친구는 내일까지 논문이 급합니다. 당신의 선택은?",
-    "EN": "Right before midterms, only two hours remain on the library computer. You need to review; a friend has a thesis due tomorrow. Your choice?",
+    "KR": "중간고사 직전, 열람실 PC가 두 시간만 남았습니다. 당신은 복습이 필요하고, 친구는 내일까지 논문이 급합니다. 당신의 선택은?",
+    "EN": "Right before midterms, only two hours of library PC remain. You need to review; a friend has a thesis due tomorrow. Your choice?",
     "CH": "期中考前，阅览室电脑只剩两小时。你要复习，朋友明天要交论文。你的选择是？",
-    "JP": "中間試験直前、閲覧室のパソコンはあと2時間。あなたは復習が必要で、友人は明日締切の論文が急です。あなたの選択は？"
+    "JP": "中間試験直前、閲覧室PCはあと2時間。あなたは復習が必要で、友人は明日締切の論文が急です。あなたの選択は？"
    },
    "q3v4_a": {
-    "KR": "내 시험을 위해 컴퓨터를 쓴다.",
-    "EN": "Use the computer for my own exam prep.",
+    "KR": "내 시험을 위해 PC를 쓴다.",
+    "EN": "Use the PC for my own exam prep.",
     "CH": "为了我的考试使用电脑。",
-    "JP": "自分の試験のためにパソコンを使う。"
+    "JP": "自分の試験のためにPCを使う。"
    },
    "q3v4_b": {
     "KR": "친구에게 자리를 양보한다.",
