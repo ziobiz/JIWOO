@@ -8,6 +8,11 @@ import { defaultProfile, type Profile } from "./profile";
 import { LangSelector } from "./LangSelector";
 import { CreditsFooter } from "./CreditsFooter";
 import { getAudio } from "./audio";
+import {
+  pickAndMarkSurveyVariants,
+  surveyUiKey,
+  type SurveyVariantPick,
+} from "./surveyVariants";
 
 const C = GAME.constants;
 
@@ -56,6 +61,7 @@ export function CharacterCreator({
   const [profile, setProfile] = useState<Profile>(defaultProfile());
   const [phase, setPhase] = useState<"info" | "survey">("info");
   const [surveyIdx, setSurveyIdx] = useState(0);
+  const [variants, setVariants] = useState<SurveyVariantPick>({ q1: 1, q2: 1, q3: 1 });
   const [error, setError] = useState("");
 
   const upd = (patch: Partial<Profile>) => setProfile((p) => ({ ...p, ...patch }));
@@ -86,12 +92,17 @@ export function CharacterCreator({
       return;
     }
     setError("");
+    // 접속·새 설문마다 미사용 변종 선택 (기기별 localStorage)
+    setVariants(pickAndMarkSurveyVariants());
+    setSurveyIdx(0);
+    upd({ survey: { q1: null, q2: null, q3: null } });
     setPhase("survey");
   }
 
   const surveyKeys = ["q1", "q2", "q3"] as const;
   const qk = surveyKeys[surveyIdx];
   const answer = profile.survey[qk];
+  const vId = variants[qk];
 
   function pickAnswer(v: "A" | "B") {
     // 선택 즉시 색으로 반영. 자동 이동하지 않고 사용자가 '다음'으로 진행.
@@ -245,12 +256,14 @@ export function CharacterCreator({
           </div>
 
           <div className="rounded-xl border border-stone-800 bg-stone-900 p-6">
+            <p className="text-xs text-stone-500 mb-3">{ui("sv_intro", lang)}</p>
             <p className="text-base leading-relaxed text-stone-200 mb-6">
-              {ui(`${qk}_t`, lang)}
+              {ui(surveyUiKey(qk, vId, "t"), lang)}
             </p>
             <div className="space-y-3">
               {(["A", "B"] as const).map((v) => {
                 const selected = answer === v;
+                const part = v === "A" ? "a" : "b";
                 return (
                   <button
                     key={v}
@@ -272,7 +285,7 @@ export function CharacterCreator({
                     >
                       {v}
                     </span>
-                    {ui(`${qk}_${v.toLowerCase()}`, lang)}
+                    {ui(surveyUiKey(qk, vId, part), lang)}
                     {selected && <span className="ml-2 text-amber-400">✓</span>}
                   </button>
                 );

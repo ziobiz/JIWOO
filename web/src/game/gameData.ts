@@ -35,6 +35,8 @@ interface GameData {
     gradeKeys: string[];
     majorKeys: string[];
     portraitCount: number;
+    surveyDims?: string[];
+    surveyVariantCount?: number;
   };
   story: Node[];
   endings: Record<string, Node[]>;

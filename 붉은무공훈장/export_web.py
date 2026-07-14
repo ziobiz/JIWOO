@@ -88,6 +88,8 @@ def build():
             "gradeKeys": GRADE_KEYS,
             "majorKeys": MAJOR_KEYS,
             "portraitCount": PORTRAIT_COUNT,
+            "surveyDims": list(i18n.SURVEY_DIMS),
+            "surveyVariantCount": i18n.SURVEY_VARIANT_COUNT,
         },
         "story": convert(story.STORY),
         "endings": {code: convert(nodes) for code, nodes in story.ENDINGS.items()},

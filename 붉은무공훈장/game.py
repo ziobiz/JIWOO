@@ -638,6 +638,7 @@ toasts = []
 
 PROFILE_PATH = os.path.join(HERE, "profile.json")
 RESULT_PATH = os.path.join(HERE, "results.csv")
+SURVEY_SEEN_PATH = os.path.join(HERE, "survey_seen.json")
 
 
 def default_profile():
@@ -649,6 +650,47 @@ def default_profile():
 
 
 profile = default_profile()
+
+
+def _load_survey_seen():
+    if not os.path.exists(SURVEY_SEEN_PATH):
+        return {}
+    try:
+        with open(SURVEY_SEEN_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_survey_seen(seen):
+    try:
+        with open(SURVEY_SEEN_PATH, "w", encoding="utf-8") as f:
+            json.dump(seen, f, ensure_ascii=False, indent=1)
+    except Exception:
+        pass
+
+
+def pick_survey_variants():
+    """유형당 미사용 변종 1개씩. 5개 소진 시 리셋(직전 문항 제외)."""
+    import random as _rnd
+    seen = _load_survey_seen()
+    picks = {}
+    n = i18n.SURVEY_VARIANT_COUNT
+    for dim in i18n.SURVEY_DIMS:
+        used = [int(x) for x in seen.get(dim, []) if str(x).isdigit() and 1 <= int(x) <= n]
+        pool = [i for i in range(1, n + 1) if i not in used]
+        if not pool:
+            last = used[-1] if used else None
+            used = []
+            pool = [i for i in range(1, n + 1) if i != last] or list(range(1, n + 1))
+        v = _rnd.choice(pool)
+        picks[dim] = v
+        if v not in used:
+            used.append(v)
+        seen[dim] = used
+    _save_survey_seen(seen)
+    return picks
 
 
 def apply_profile_name():
@@ -2915,9 +2957,10 @@ def _randomize_look():
 
 
 def _cc_page_survey():
-    """2페이지 : 성향 설문 3문항. 반환 'done'/'back'/'title'."""
-    qs = [("q1_t", "q1_a", "q1_b"), ("q2_t", "q2_a", "q2_b"), ("q3_t", "q3_a", "q3_b")]
-    keys = ["q1", "q2", "q3"]
+    """2페이지 : 성향 설문 3문항(유형당 변종 랜덤). 반환 'done'/'back'/'title'."""
+    keys = list(i18n.SURVEY_DIMS)
+    picks = pick_survey_variants()
+    qs = [i18n.survey_ui_keys(dim, picks[dim]) for dim in keys]
     idx = 0
     while idx < len(qs):
         qt, qa, qb = qs[idx]
@@ -2983,7 +3026,6 @@ def _cc_page_survey():
             if advanced:
                 break
     return "done"
-
 
 def create_character():
     """캐릭터 생성 전체 흐름. 완료 시 True, 취소 시 False(타이틀로)."""

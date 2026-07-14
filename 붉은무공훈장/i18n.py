@@ -192,31 +192,111 @@ UI = {
     "face_square": {"KR": "각진형", "EN": "Square", "CH": "方形", "JP": "四角"},
 
     # ── 성향 설문 (사전) ──
+    # 유형 3종 × 변종 5개. A/B 의미는 항상 동일(분석·통계 호환):
+    #   q1 A=원칙 / B=공감   |  q2 A=진실·용기 / B=명예 유지  |  q3 A=자기 / B=이타
     "sv_title":  {"KR": "나의 성향 테스트", "EN": "My Tendency Test", "CH": "我的倾向测试", "JP": "わたしの傾向テスト"},
-    "sv_intro":  {"KR": "게임 전, 가벼운 질문 3가지. 정답은 없습니다.",
-                  "EN": "Three light questions before we begin. There are no right answers.",
-                  "CH": "开始前的三个小问题。没有标准答案。",
-                  "JP": "始める前に、軽い3つの質問。正解はありません。"},
+    "sv_intro":  {"KR": "게임 전, 가벼운 질문 3가지. 매번 다른 상황이 나옵니다. 정답은 없습니다.",
+                  "EN": "Three light questions before we begin. Scenarios change each visit. No right answers.",
+                  "CH": "开始前三个小问题。每次情景都会不同。没有标准答案。",
+                  "JP": "始める前に軽い3つの質問。毎回違う場面が出ます。正解はありません。"},
     "sv_pick":   {"KR": "A 와 B 중 하나를 고르세요", "EN": "Choose A or B", "CH": "请在 A 与 B 中选择", "JP": "A か B を選んでください"},
     "sv_progress": {"KR": "질문 {i} / {n}", "EN": "Question {i} / {n}", "CH": "问题 {i} / {n}", "JP": "質問 {i} / {n}"},
-    "q1_t": {"KR": "당신은 학급 반장입니다. 평소 성실하지만 오늘따라 몸이 아파 지각한 친구가 있습니다. 원칙대로라면 예외 없이 벌점을 줘야 합니다. 당신의 선택은?",
-             "EN": "You are the class monitor. A usually diligent friend is late today because they're ill. By the rules, you must give a penalty with no exception. Your choice?",
-             "CH": "你是班长。一位平时认真的朋友今天因身体不适而迟到。按规定必须一视同仁地记过。你的选择是？",
-             "JP": "あなたは学級委員長。普段は真面目な友人が、今日は体調が悪くて遅刻しました。原則では例外なく罰点を与えるべきです。あなたの選択は？"},
-    "q1_a": {"KR": "원칙은 원칙이다. 규칙대로 벌점을 준다.", "EN": "Rules are rules. Give the penalty.", "CH": "原则就是原则，照规矩记过。", "JP": "原則は原則。規則どおり罰点を与える。"},
-    "q1_b": {"KR": "친구의 사정을 이해하고 이번 한 번만 눈감아 준다.", "EN": "Understand their situation and let it slide just this once.", "CH": "体谅朋友的处境，这一次睁一只眼闭一只眼。", "JP": "友人の事情を汲んで、今回だけ見逃す。"},
-    "q2_t": {"KR": "나의 치명적 실수를 아무도 모릅니다. 조용히 덮으면 모두가 나를 칭송하지만, 솔직히 고백하면 큰 질타를 받습니다. 당신의 선택은?",
-             "EN": "No one knows your fatal mistake. Bury it quietly and everyone praises you; confess honestly and you face harsh blame. Your choice?",
-             "CH": "没有人知道你的致命失误。悄悄掩盖，众人便会称赞你；如实坦白，则会遭到严厉指责。你的选择是？",
-             "JP": "あなたの致命的なミスを誰も知りません。黙って隠せば皆に称賛され、正直に告白すれば激しく責められます。あなたの選択は？"},
-    "q2_a": {"KR": "비난을 받더라도 솔직하게 진실을 밝힌다.", "EN": "Tell the truth honestly, even if blamed.", "CH": "即使被指责，也如实说出真相。", "JP": "非難されても正直に真実を明かす。"},
-    "q2_b": {"KR": "조용히 묻어두고 칭찬과 평판을 유지한다.", "EN": "Bury it quietly and keep the praise and reputation.", "CH": "悄悄掩盖，维持赞誉与名声。", "JP": "静かに隠し、称賛と評判を保つ。"},
-    "q3_t": {"KR": "가장 중요한 기말고사 전날 새벽, 친한 친구가 심각한 고민으로 울며 전화했습니다. 내일 시험이 입시를 좌우합니다. 당신의 선택은?",
-             "EN": "The dawn before your most important final exam, a close friend calls in tears over a serious worry. Tomorrow's exam could decide your future. Your choice?",
-             "CH": "最重要的期末考前一天凌晨，好友因严重烦恼哭着打来电话。明天的考试将左右你的升学。你的选择是？",
-             "JP": "最も大切な期末試験の前夜、親友が深刻な悩みで泣きながら電話してきました。明日の試験は進路を左右します。あなたの選択は？"},
-    "q3_a": {"KR": "내일 시험이 더 중요하므로, 미안하지만 내일 이야기하자고 한다.", "EN": "Tomorrow's exam matters more — apologize and say let's talk tomorrow.", "CH": "明天的考试更重要，抱歉地说明天再聊。", "JP": "明日の試験が大事だから、悪いけど明日話そうと言う。"},
-    "q3_b": {"KR": "내 성적이 떨어질 각오를 하더라도, 친구의 이야기를 끝까지 들어준다.", "EN": "Even at the cost of my grades, listen to my friend to the end.", "CH": "哪怕成绩下滑，也把朋友的话听到最后。", "JP": "成績が下がる覚悟でも、友人の話を最後まで聞く。"},
+
+    # q1 · 원칙 vs 공감 ─────────────────────────────────
+    "q1v1_t": {"KR": "당신은 학급 반장입니다. 평소 성실하지만 오늘따라 몸이 아파 지각한 친구가 있습니다. 원칙대로라면 예외 없이 벌점을 줘야 합니다. 당신의 선택은?",
+               "EN": "You are the class monitor. A usually diligent friend is late today because they're ill. By the rules, you must give a penalty with no exception. Your choice?",
+               "CH": "你是班长。一位平时认真的朋友今天因身体不适而迟到。按规定必须一视同仁地记过。你的选择是？",
+               "JP": "あなたは学級委員長。普段は真面目な友人が、今日は体調が悪くて遅刻しました。原則では例外なく罰点を与えるべきです。あなたの選択は？"},
+    "q1v1_a": {"KR": "원칙은 원칙이다. 규칙대로 벌점을 준다.", "EN": "Rules are rules. Give the penalty.", "CH": "原则就是原则，照规矩记过。", "JP": "原則は原則。規則どおり罰点を与える。"},
+    "q1v1_b": {"KR": "친구의 사정을 이해하고 이번 한 번만 눈감아 준다.", "EN": "Understand their situation and let it slide just this once.", "CH": "体谅朋友的处境，这一次睁一只眼闭一只眼。", "JP": "友人の事情を汲んで、今回だけ見逃す。"},
+    "q1v2_t": {"KR": "조별 과제에서, 그동안 당신을 도와주던 팀원이 갑자기 빈 장을 제출했습니다. 평가 기준상 '미제출'로 보고해야 합니다. 당신의 선택은?",
+               "EN": "In a group project, a teammate who has always backed you turns in a blank page. By the rubric you must report it as incomplete. Your choice?",
+               "CH": "小组作业中，一直帮你的组员突然交了空白页。按评分标准必须记为未提交。你的选择是？",
+               "JP": "グループ課題で、いつも助けてくれたメンバーが突然白紙を提出しました。評価基準では未提出と報告すべきです。あなたの選択は？"},
+    "q1v2_a": {"KR": "기준대로 미제출로 보고한다. 예외는 없다.", "EN": "Report it as incomplete by the rules. No exceptions.", "CH": "按标准记为未提交。没有例外。", "JP": "基準どおり未提出と報告する。例外はない。"},
+    "q1v2_b": {"KR": "사정을 듣고 보완할 시간을 준다. 이번만 봐준다.", "EN": "Hear them out and give time to fix it. Let it slide once.", "CH": "先听原因并给补交时间。这一次通融。", "JP": "事情を聞いて手直しの時間を与える。今回だけ見逃す。"},
+    "q1v3_t": {"KR": "편의점 알바입니다. 평소 폐점 手伝던 단골이 거스름돈 천 원이 부족합니다. 계산대 규정은 정확히 받아야 합니다. 당신의 선택은?",
+               "EN": "You're working at a convenience store. A regular who often helps lock up is short ₩1,000. Policy says charge the exact amount. Your choice?",
+               "CH": "你在便利店兼职。常帮你打烊的熟客少带一千韩元。规定必须足额收款。你的选择是？",
+               "JP": "コンビニのバイト。いつも閉店を手伝ってくれる常連が千円足りません。規定では正確に受け取るべきです。あなたの選択は？"},
+    "q1v3_a": {"KR": "규정대로 부족한 금액을 정확히 받는다.", "EN": "Follow policy and collect the exact amount owed.", "CH": "按规定足额收取差额。", "JP": "規定どおり不足分を正確に受け取る。"},
+    "q1v3_b": {"KR": "알고 지낸 사이니 이번만 천 원을 넘겨 준다.", "EN": "They're someone you know — waive the ₩1,000 just this once.", "CH": "熟识的人，这一次免收一千。", "JP": "顔見知りの間柄だから、今回だけ千円を見逃す。"},
+    "q1v4_t": {"KR": "동아리 대회 마감이 지났습니다. 가장 친한 친구가 늦게라도 작품을 냈습니다. 규칙상 제출 거부입니다. 당신의 선택은?",
+               "EN": "The club contest deadline has passed. Your closest friend still submitted a piece late. Rules say reject it. Your choice?",
+               "CH": "社团比赛已过截稿。最好的朋友仍迟交了作品。按规定应拒收。你的选择是？",
+               "JP": "サークルのコンテスト締切を過ぎました。一番の友人が遅く作品を出しました。規則では受理不可です。あなたの選択は？"},
+    "q1v4_a": {"KR": "마감은 마감이다. 제출을 받지 않는다.", "EN": "A deadline is a deadline. Do not accept it.", "CH": "截止就是截止，不予受理。", "JP": "締切は締切。受理しない。"},
+    "q1v4_b": {"KR": "친구의 노력을 생각해 이번만 접수한다.", "EN": "Consider their effort and accept it just this once.", "CH": "体谅朋友的努力，这一次收下。", "JP": "友人の努力を酌量し、今回だけ受け付ける。"},
+    "q1v5_t": {"KR": "기숙사 소등·정숙 시간입니다. 오늘 하루가 힘들었던 룸메이트가 음악을 틀고 있습니다. RA로서 경고를 해야 합니다. 당신의 선택은?",
+               "EN": "It's dorm quiet hours. Your roommate, after a brutal day, is playing music. As RA you should warn them. Your choice?",
+               "CH": "宿舍已到熄灯与安静时间。经历艰难一天的室友在放音乐。作为楼层委员你应警告。你的选择是？",
+               "JP": "寮の消灯・静粛時間。つらい一日を過ごしたルームメイトが音楽をかけています。RAとして注意すべきです。あなたの選択は？"},
+    "q1v5_a": {"KR": "규칙이니 정숙을 요청하고 음악을 끄게 한다.", "EN": "Rules are rules — ask for quiet and turn the music off.", "CH": "按规定要求安静，关掉音乐。", "JP": "規則だから静粛を求め、音楽を止めさせる。"},
+    "q1v5_b": {"KR": "사정을 알고 오늘 밤만 낮은 음량으로 허용한다.", "EN": "Knowing their day, allow low volume just for tonight.", "CH": "体谅对方，今晚仅允许小声。", "JP": "事情を汲み、今夜だけ小さい音量で許す。"},
+
+    # q2 · 진실·용기 vs 명예 유지 ────────────────────────
+    "q2v1_t": {"KR": "나의 치명적 실수를 아무도 모릅니다. 조용히 덮으면 모두가 나를 칭송하지만, 솔직히 고백하면 큰 질타를 받습니다. 당신의 선택은?",
+               "EN": "No one knows your fatal mistake. Bury it quietly and everyone praises you; confess honestly and you face harsh blame. Your choice?",
+               "CH": "没有人知道你的致命失误。悄悄掩盖，众人便会称赞你；如实坦白，则会遭到严厉指责。你的选择是？",
+               "JP": "あなたの致命的なミスを誰も知りません。黙って隠せば皆に称賛され、正直に告白すれば激しく責められます。あなたの選択は？"},
+    "q2v1_a": {"KR": "비난을 받더라도 솔직하게 진실을 밝힌다.", "EN": "Tell the truth honestly, even if blamed.", "CH": "即使被指责，也如实说出真相。", "JP": "非難されても正直に真実を明かす。"},
+    "q2v1_b": {"KR": "조용히 묻어두고 칭찬과 평판을 유지한다.", "EN": "Bury it quietly and keep the praise and reputation.", "CH": "悄悄掩盖，维持赞誉与名声。", "JP": "静かに隠し、称賛と評判を保つ。"},
+    "q2v2_t": {"KR": "실험 보고서에서 당신이 시약을 잘못 섞었고, 그 결과로 A를 받았습니다. 당신만 알고 있습니다. 당신의 선택은?",
+               "EN": "In a lab report you mixed the wrong reagent and still got an A. Only you know. Your choice?",
+               "CH": "实验报告里你混错了试剂，却因此得了 A。只有你知道。你的选择是？",
+               "JP": "実験レポートで試薬を混ぜ間違え、その結果Aを取りました。知っているのはあなただけです。あなたの選択は？"},
+    "q2v2_a": {"KR": "교수에게 오류를 알리고 점수를 재평가받는다.", "EN": "Tell the professor and accept a regrade.", "CH": "向教授说明错误并接受重新评分。", "JP": "教授に誤りを告げ、再評価を受ける。"},
+    "q2v2_b": {"KR": "이미 끝난 일이니 조용히 성적을 유지한다.", "EN": "It's done — quietly keep the grade.", "CH": "既成事实，悄悄保住成绩。", "JP": "終わったことなので静かに成績を保つ。"},
+    "q2v3_t": {"KR": "경기 중 상대를 살짝 걸었지만 주심이 보지 못했습니다. 그대로면 팀이 이길 가능성이 큽니다. 당신의 선택은?",
+               "EN": "During a match you lightly tripped an opponent; the ref missed it. If you stay quiet, your team may win. Your choice?",
+               "CH": "比赛中你绊了对手一下，裁判没看见。不说出去的话队伍很可能会赢。你的选择是？",
+               "JP": "試合中、相手を軽くつまづかせたが主審は見ていません。黙っていればチームが勝てそうです。あなたの選択は？"},
+    "q2v3_a": {"KR": "스스로 손을 들고 파울을 인정한다.", "EN": "Raise your hand and admit the foul.", "CH": "主动举手承认犯规。", "JP": "自ら手を挙げてファウルを認める。"},
+    "q2v3_b": {"KR": "들키지 않았으니 경기에 집중해 승리를 지킨다.", "EN": "It wasn't seen — focus and protect the win.", "CH": "没被发现，专心保住胜利。", "JP": "見られていないから試合に集中し勝利を守る。"},
+    "q2v4_t": {"KR": "당신이 퍼뜨린 잘못된 소문이 한 동료를 다치게 했습니다. 정정하면 당신이 망신을 당합니다. 당신의 선택은?",
+               "EN": "A false rumor you spread hurt a classmate. Retracting it would shame you. Your choice?",
+               "CH": "你传开的错误谣言伤害了一位同学。更正就会让你颜面尽失。你的选择是？",
+               "JP": "あなたが広めた誤った噂が同級生を傷つけました。訂正すればあなたの恥になります。あなたの選択は？"},
+    "q2v4_a": {"KR": "공개적으로 잘못을 인정하고 소문을 바로잡는다.", "EN": "Admit the mistake openly and correct the rumor.", "CH": "公开承认错误并澄清谣言。", "JP": "公に過ちを認め、噂を訂正する。"},
+    "q2v4_b": {"KR": "이미 퍼진 일이니 조용히 지나가게 둔다.", "EN": "It's already out — let it fade quietly.", "CH": "既已传开，就让它悄悄过去。", "JP": "もう広まったことだから、静かに通り過ぎさせる。"},
+    "q2v5_t": {"KR": "코딩 대회에서 금지된 AI를 몰래 썼고, 당신만 압니다. 순위를 지킬 수 있습니다. 당신의 선택은?",
+               "EN": "In a coding contest you secretly used banned AI help; only you know. You can keep your rank. Your choice?",
+               "CH": "编程比赛中你偷偷用了禁用的 AI，只有你知道。可以保住名次。你的选择是？",
+               "JP": "コーディング大会で禁止のAIをこっそり使い、知っているのは自分だけ。順位を守れます。あなたの選択は？"},
+    "q2v5_a": {"KR": "부정임을 고백하고 순위에서 내려온다.", "EN": "Confess the cheat and step down from the ranking.", "CH": "承认作弊并退出排名。", "JP": "不正を告白し、順位から下りる。"},
+    "q2v5_b": {"KR": "증거가 없으니 순위를 유지한다.", "EN": "No proof — keep the ranking.", "CH": "没有证据，保住名次。", "JP": "証拠はないので順位を維持する。"},
+
+    # q3 · 자기 vs 이타 ─────────────────────────────────
+    "q3v1_t": {"KR": "가장 중요한 기말고사 전날 새벽, 친한 친구가 심각한 고민으로 울며 전화했습니다. 내일 시험이 입시를 좌우합니다. 당신의 선택은?",
+               "EN": "The dawn before your most important final exam, a close friend calls in tears over a serious worry. Tomorrow's exam could decide your future. Your choice?",
+               "CH": "最重要的期末考前一天凌晨，好友因严重烦恼哭着打来电话。明天的考试将左右你的升学。你的选择是？",
+               "JP": "最も大切な期末試験の前夜、親友が深刻な悩みで泣きながら電話してきました。明日の試験は進路を左右します。あなたの選択は？"},
+    "q3v1_a": {"KR": "내일 시험이 더 중요하므로, 미안하지만 내일 이야기하자고 한다.", "EN": "Tomorrow's exam matters more — apologize and say let's talk tomorrow.", "CH": "明天的考试更重要，抱歉地说明天再聊。", "JP": "明日の試験が大事だから、悪いけど明日話そうと言う。"},
+    "q3v1_b": {"KR": "내 성적이 떨어질 각오를 하더라도, 친구의 이야기를 끝까지 들어준다.", "EN": "Even at the cost of my grades, listen to my friend to the end.", "CH": "哪怕成绩下滑，也把朋友的话听到最后。", "JP": "成績が下がる覚悟でも、友人の話を最後まで聞く。"},
+    "q3v2_t": {"KR": "인턴십 추천 자리가 하나뿐입니다. 지도교수는 당신과, 형편이 더 절실한 친구 중 하나만 추천할 수 있습니다. 당신의 선택은?",
+               "EN": "Only one internship recommendation slot. Your advisor can recommend either you or a friend who needs it more. Your choice?",
+               "CH": "实习推荐名额只有一个。导师只能推荐你，或更急需的朋友。你的选择是？",
+               "JP": "インターン推薦枠は一つだけ。指導教員はあなたか、より切実な友人のどちらか一人です。あなたの選択は？"},
+    "q3v2_a": {"KR": "내 기회를 지킨다. 나를 먼저 추천해 달라고 한다.", "EN": "Protect my shot — ask to be recommended first.", "CH": "保住自己的机会，请先推荐我。", "JP": "自分の機会を守る。まず自分を推薦してほしいと頼む。"},
+    "q3v2_b": {"KR": "친구를 추천해 달라고 양보한다.", "EN": "Step aside and ask them to recommend your friend.", "CH": "让出机会，请推荐朋友。", "JP": "友人を推薦してほしいと譲る。"},
+    "q3v3_t": {"KR": "내일 중요한 면접이 있어 쉬려던 밤, 응급실 자원봉사 마지막 자리가 비었습니다. 지금 가면 잠을 못 잡니다. 당신의 선택은?",
+               "EN": "The night before a big interview you planned to rest, but the last ER volunteer slot opens. Going means no sleep. Your choice?",
+               "CH": "明天有重要面试你原打算休息，急诊志愿最后一席空了。去了就睡不好。你的选择是？",
+               "JP": "明日の大事な面接のため休むつもりだった夜、救急ボランティアの最後の枠が空きました。行けば眠れません。あなたの選択は？"},
+    "q3v3_a": {"KR": "면접을 위해 거절하고 쉰다.", "EN": "Decline and rest for the interview.", "CH": "为了面试而拒绝并休息。", "JP": "面接のため断り、休む。"},
+    "q3v3_b": {"KR": "면접이 흔들려도 자원봉사에 나간다.", "EN": "Go volunteer even if the interview suffers.", "CH": "即使面试受影响也去志愿。", "JP": "面接が危うくてもボランティアに行く。"},
+    "q3v4_t": {"KR": "중간고사 직전, 열람실 PC가 두 시간만 남았습니다. 당신은 복습이 필요하고, 친구는 내일까지 논문이 급합니다. 당신의 선택은?",
+               "EN": "Right before midterms, only two hours of library PC remain. You need to review; a friend has a thesis due tomorrow. Your choice?",
+               "CH": "期中考前，阅览室电脑只剩两小时。你要复习，朋友明天要交论文。你的选择是？",
+               "JP": "中間試験直前、閲覧室PCはあと2時間。あなたは復習が必要で、友人は明日締切の論文が急です。あなたの選択は？"},
+    "q3v4_a": {"KR": "내 시험을 위해 PC를 쓴다.", "EN": "Use the PC for my own exam prep.", "CH": "为了我的考试使用电脑。", "JP": "自分の試験のためにPCを使う。"},
+    "q3v4_b": {"KR": "친구에게 자리를 양보한다.", "EN": "Give the seat to your friend.", "CH": "把位置让给朋友。", "JP": "友人に席を譲る。"},
+    "q3v5_t": {"KR": "함께 살던 친구가 지갑을 잃어 오늘 식비가 없습니다. 당신도 다음 주까지 예산이 빠듯합니다. 당신의 선택은?",
+               "EN": "A housemate lost their wallet and has no food money today. Your budget is tight until next week too. Your choice?",
+               "CH": "合住的朋友丢了钱包，今天没有饭钱。你自己也要撑到下周，预算很紧。你的选择是？",
+               "JP": "同居の友人が財布をなくし、今日の食費がありません。あなたも来週まで予算が厳しいです。あなたの選択は？"},
+    "q3v5_a": {"KR": "미안하지만 내 예산부터 지킨다.", "EN": "Apologize, but protect my own budget first.", "CH": "抱歉，但先保住自己的预算。", "JP": "悪いけど、まず自分の予算を守る。"},
+    "q3v5_b": {"KR": "내 예산을 쪼개서라도 식사를 사 준다.", "EN": "Split my budget and buy them a meal anyway.", "CH": "哪怕挤预算也请客吃一顿。", "JP": "自分の予算を割いてでも食事をごちそうする。"},
 
     # ── 교차 분석 ──
     "an_title":  {"KR": "성향 × 선택 교차 분석", "EN": "Tendency × Choices — Cross Analysis", "CH": "倾向 × 选择 交叉分析", "JP": "傾向 × 選択 クロス分析"},
@@ -274,6 +354,21 @@ UI = {
                   "CH": "该结果已记录到 results.csv  ·  点击退出",
                   "JP": "この結果は results.csv に記録されました  ·  クリックで終了"},
 }
+
+# 성향 설문: 유형당 변종 수 · 하위호환 키(q1_t …)는 v1과 동일
+SURVEY_DIMS = ("q1", "q2", "q3")
+SURVEY_VARIANT_COUNT = 5
+for _dim in SURVEY_DIMS:
+    for _suf in ("t", "a", "b"):
+        UI[f"{_dim}_{_suf}"] = UI[f"{_dim}v1_{_suf}"]
+
+
+def survey_ui_keys(dim: str, variant: int):
+    """dim='q1'|'q2'|'q3', variant=1..5 → (제목, A, B) UI 키."""
+    v = max(1, min(SURVEY_VARIANT_COUNT, int(variant)))
+    prefix = f"{dim}v{v}"
+    return f"{prefix}_t", f"{prefix}_a", f"{prefix}_b"
+
 
 # ── 스토리 텍스트 번역 (원문 KR → EN/CH/JP) ───────────
 TR = {
