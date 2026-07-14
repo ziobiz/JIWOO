@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildReport } from "@/lib/analyze";
-import { getSupabaseAdmin, rowToPlayResult } from "@/lib/supabase";
+import { getSupabaseAdmin, getSupabaseConfigError, rowToPlayResult } from "@/lib/supabase";
 import type { PlayResult } from "@/types/game";
 import fs from "fs";
 import path from "path";
@@ -62,6 +62,7 @@ export async function GET(request: Request) {
     // 오류가 나도 관리자는 (빈) 대시보드에 진입하고, 원인은 source에 표시된다.
     try {
       const admin = getSupabaseAdmin();
+      const cfgErr = getSupabaseConfigError();
       if (admin) {
         const { data, error } = await admin
           .from("play_results")
@@ -72,6 +73,11 @@ export async function GET(request: Request) {
         } else {
           rows = (data ?? []).map((r) => rowToPlayResult(r));
         }
+      } else if (cfgErr) {
+        rows = loadLocalCsv();
+        source = rows.length
+          ? `local results.csv · (경고) ${cfgErr}`
+          : cfgErr;
       } else {
         rows = loadLocalCsv();
         source = rows.length
