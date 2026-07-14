@@ -72,3 +72,23 @@ create policy "Anyone can read branding"
   using (true);
 
 comment on table public.site_branding is '사이트 링크 미리보기(OG) 브랜딩 설정';
+
+-- 사전 성향 설문 문항 (3유형 × 5변종 × t/a/b × 4언어) — 단일 행
+create table if not exists public.survey_copy (
+  id int primary key default 1,
+  payload jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.survey_copy (id, payload) values (1, '{}'::jsonb)
+  on conflict (id) do nothing;
+
+alter table public.survey_copy enable row level security;
+
+drop policy if exists "Anyone can read survey copy" on public.survey_copy;
+create policy "Anyone can read survey copy"
+  on public.survey_copy for select
+  to anon, authenticated
+  using (true);
+
+comment on table public.survey_copy is '사전 성향 설문 문항 텍스트 (관리자 편집)';

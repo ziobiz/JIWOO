@@ -19,6 +19,7 @@ import { useBranding } from "@/lib/useBranding";
 import { ChartBoard, type Series, type Slice } from "./Charts";
 import { QRCard } from "./QRCard";
 import { BrandCard } from "./BrandCard";
+import { SurveyCard } from "./SurveyCard";
 
 interface AdminReport extends AnalysisReport {
   rows?: PlayResult[];
@@ -33,7 +34,7 @@ interface AdminReport extends AnalysisReport {
 }
 
 type ViewMode = "both" | "chart" | "table";
-type AdminPanel = "data" | "analysis" | "brand" | "qr";
+type AdminPanel = "data" | "analysis" | "brand" | "survey" | "qr";
 
 type DeletePending =
   | { mode: "selected"; ids: string[]; step: 1 | 2 }
@@ -513,6 +514,7 @@ export default function AdminDashboard() {
     ["data", "데이터 목록"],
     ["analysis", "분석 · 그래프"],
     ["brand", "브랜드"],
+    ["survey", "사전 문의"],
     ["qr", "QR 배포"],
   ];
 
@@ -1065,6 +1067,7 @@ export default function AdminDashboard() {
 
         {/* ── 브랜드 / QR — 메뉴 선택 시에만 ── */}
         {panel === "brand" && <BrandCard secret={secret} />}
+        {panel === "survey" && <SurveyCard secret={secret} />}
         {panel === "qr" && <QRCard />}
       </main>
       <CreditsFooter light />

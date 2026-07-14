@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { GAME, ui, portraitSrc, type Lang } from "./gameData";
 import { NAME_MAX } from "./useLang";
@@ -10,9 +10,10 @@ import { CreditsFooter } from "./CreditsFooter";
 import { getAudio } from "./audio";
 import {
   pickAndMarkSurveyVariants,
-  surveyUiKey,
   type SurveyVariantPick,
 } from "./surveyVariants";
+import { loadSurveyCopyClient, surveyDisplay } from "./surveyCopyClient";
+import type { SurveyCopy } from "@/lib/surveyCopy";
 
 const C = GAME.constants;
 
@@ -62,7 +63,12 @@ export function CharacterCreator({
   const [phase, setPhase] = useState<"info" | "survey">("info");
   const [surveyIdx, setSurveyIdx] = useState(0);
   const [variants, setVariants] = useState<SurveyVariantPick>({ q1: 1, q2: 1, q3: 1 });
+  const [surveyCopy, setSurveyCopy] = useState<SurveyCopy | null>(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    loadSurveyCopyClient().then(setSurveyCopy);
+  }, []);
 
   const upd = (patch: Partial<Profile>) => setProfile((p) => ({ ...p, ...patch }));
 
@@ -258,7 +264,7 @@ export function CharacterCreator({
           <div className="rounded-xl border border-stone-800 bg-stone-900 p-6">
             <p className="text-xs text-stone-500 mb-3">{ui("sv_intro", lang)}</p>
             <p className="text-base leading-relaxed text-stone-200 mb-6">
-              {ui(surveyUiKey(qk, vId, "t"), lang)}
+              {surveyDisplay(surveyCopy, qk, vId, "t", lang)}
             </p>
             <div className="space-y-3">
               {(["A", "B"] as const).map((v) => {
@@ -285,7 +291,7 @@ export function CharacterCreator({
                     >
                       {v}
                     </span>
-                    {ui(surveyUiKey(qk, vId, part), lang)}
+                    {surveyDisplay(surveyCopy, qk, vId, part, lang)}
                     {selected && <span className="ml-2 text-amber-400">✓</span>}
                   </button>
                 );
