@@ -83,6 +83,28 @@ export function ui(
 }
 
 // ── 에셋 경로 해석 (game.py IMG_BASE 이식) ────────────
+/** 누끼(투명 PNG) 갱신 시 브라우저 캐시 무효화 */
+const ASSET_VER = "nukki2";
+
+const CHAR_BASES = new Set([
+  "player1",
+  "player2",
+  "henry",
+  "wilson",
+  "jim",
+  "commander",
+  "soldier",
+  "daniel",
+  "mark",
+  "veteran",
+  "wounded",
+  "medic",
+]);
+
+function withVer(path: string, bust: boolean): string {
+  return bust ? `${path}?v=${ASSET_VER}` : path;
+}
+
 export function imgSrc(key: string | null): string | null {
   if (!key) return null;
   let base = key;
@@ -90,11 +112,16 @@ export function imgSrc(key: string | null): string | null {
   if (bg) base = `bg(${bg[1]})`;
   else if (key === "player1") base = "player(1)";
   else if (key === "player2") base = "player(2)";
-  return `/assets/${base}.png`;
+  const isChar =
+    CHAR_BASES.has(key) ||
+    key.startsWith("henry") ||
+    key.startsWith("portrait") ||
+    key.startsWith("player");
+  return withVer(`/assets/${base}.png`, isChar);
 }
 
 export function portraitSrc(index: number): string {
-  return `/assets/portrait${index}.png`;
+  return withVer(`/assets/portrait${index}.png`, true);
 }
 
 // ── 화자 → 좌측 초상 (game.py resolve_speaker_portrait 이식) ──

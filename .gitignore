@@ -18,6 +18,8 @@ web/.next/
 web/.env.local
 web/.vercel/
 web/public/assets/
+# 누끼 원본 백업 (대용량)
+붉은무공훈장/assets/_pre_nukki/
 # 임시 검증 스크립트/스크린샷
 _*.py
 _*.png
