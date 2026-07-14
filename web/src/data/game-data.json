@@ -3179,6 +3179,12 @@
     "CH": "点击 / 空格键",
     "JP": "クリック / スペースキー"
    },
+   "hint_advance_touch": {
+    "KR": "Click the screen",
+    "EN": "Click the screen",
+    "CH": "点击屏幕",
+    "JP": "画面をタップ"
+   },
    "choice_q": {
     "KR": "당신의 선택은?",
     "EN": "What is your choice?",

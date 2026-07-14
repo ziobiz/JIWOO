@@ -290,9 +290,7 @@ export function PlayView({
             >
               {t(frame.text, lang, profile.name)}
             </div>
-            <p className="mt-2 text-right text-xs text-amber-500/70">
-              <span className="animate-pulse">Click / Space »»</span>
-            </p>
+            <AdvanceHint lang={lang} />
           </div>
         )}
 
@@ -428,5 +426,42 @@ export function PlayView({
         />
       )}
     </div>
+  );
+}
+
+/** 대화창 왼쪽 하단 진행 힌트. 모바일은 터치 문구. */
+function AdvanceHint({ lang }: { lang: Lang }) {
+  const [touch, setTouch] = useState(false);
+  const [lit, setLit] = useState(0);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(hover: none) and (pointer: coarse), (max-width: 768px)");
+    const apply = () => setTouch(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setLit((n) => (n + 1) % 4), 220);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const label = ui(touch ? "hint_advance_touch" : "hint_advance", lang);
+
+  return (
+    <p className="mt-2 text-left text-xs text-amber-500/70 flex items-center gap-2">
+      <span>{label}</span>
+      <span className="inline-flex gap-0.5 text-sm font-bold tracking-tight" aria-hidden>
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className={i < lit ? "text-amber-400" : "text-stone-600"}
+          >
+            &gt;
+          </span>
+        ))}
+      </span>
+    </p>
   );
 }

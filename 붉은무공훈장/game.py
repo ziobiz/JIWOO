@@ -1456,17 +1456,17 @@ def draw_dialog_box(name, text, name_color, text_color, serif=True, done=True):
 
 
 def _draw_advance_hint():
-    """하단 우측 진행 힌트 :  Click / Space bar  > >> >>>  (쉐브론 순차 점등)."""
+    """대화창 왼쪽 하단 진행 힌트 :  Click / Space bar  > >> >>>  (쉐브론 순차 점등)."""
     t = pygame.time.get_ticks()
     cy = HEIGHT - 50
+    left = 46                           # 우측이던 여백(WIDTH-46)과 동일 수준
     lbl = get_font(15).render(i18n.ui("hint_advance"), True, GRAY)
     lbl.set_alpha(210)
     chev_f = get_font(20, bold=True)
     chev_w = chev_f.size(">")[0]
     spacing = 4
-    right = WIDTH - 46
-    chev_x0 = right - (3 * chev_w + 2 * spacing)
-    screen.blit(lbl, (chev_x0 - 16 - lbl.get_width(), cy - lbl.get_height() // 2))
+    screen.blit(lbl, (left, cy - lbl.get_height() // 2))
+    chev_x0 = left + lbl.get_width() + 16
     lit = (t // 220) % 4          # 0→1→2→3 : > , >> , >>> 순차 점등 후 리셋
     for i in range(3):
         on = i < lit

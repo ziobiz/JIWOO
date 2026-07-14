@@ -102,6 +102,7 @@ UI = {
                       "JP": "ホイールでスクロール  ·  ESC · クリックで閉じる"},
     "backlog_empty": {"KR": "아직 기록된 대사가 없습니다", "EN": "No dialogue recorded yet", "CH": "还没有对话记录", "JP": "まだログはありません"},
     "hint_advance":{"KR": "Click / Space bar", "EN": "Click / Space bar", "CH": "点击 / 空格键", "JP": "クリック / スペースキー"},
+    "hint_advance_touch":{"KR": "Click the screen", "EN": "Click the screen", "CH": "点击屏幕", "JP": "画面をタップ"},
     "choice_q":    {"KR": "당신의 선택은?", "EN": "What is your choice?", "CH": "你的选择是？", "JP": "あなたの選択は？"},
     "explore_q":   {"KR": "어디를 조사할까?", "EN": "Where will you look?", "CH": "去调查哪里？", "JP": "どこを調べる？"},
     "explore_footer": {"KR": "모두 조사하면 밤이 온다  ·  조사 완료 {done} / {total}",
